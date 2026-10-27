@@ -3,13 +3,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CPU Escape Game</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #101020;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #game-container {
+            width: 95vw;
+            height: 95vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
-    <h1>CPU Escape Game</h1>
-    <p>Our computer organization game!</p>
+    <div id="game-container"></div>
 
     <script src="./node_modules/phaser/dist/phaser.js"></script>
+    <script src="questions.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
