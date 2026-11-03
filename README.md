@@ -1,18 +1,19 @@
-﻿# CPU Escape
+# Escape the CPU
 
-A Geometry Dash inspired endless runner for CSC3501, with CPU knowledge checkpoints.
+An original pixel-art educational runner for CSC3501. Open index.html in a modern browser; no build or server required.
 
-Open `index.html` in a modern browser. No build, server, or dependency installation is required.
-The opening screen explains the controls, quizzes, hearts, and refills. The playable stage and all HUD stats stay hidden until you select Start running.
+Start with ENTER THE MACHINE: five automatic fade-in/fade-out story cards tell how a boy was transported into the computer, then reveal the route map (Skip story opens the map immediately). Original synthesized chiptune audio begins after this click. Toggle MUSIC at any time. Reduced-motion settings disable interface animation.
 
-- Space, up arrow, W, or touch/click the game to jump. Hold to jump again on landing.
-- P pauses or resumes. Leaving the window automatically pauses the run.
-- Distance is shown at the top right and increases only while running. Best distance is saved locally when available.
-- Movement accelerates smoothly from 360 toward 620 pixels/second. Rendering uses requestAnimationFrame; physics uses a fixed 120 Hz timestep.
-- Each round starts with three heart icons representing three available revives. Hitting a transistor or platform edge, or falling into a gap, breaks one heart and presents a CPU question. A correct answer revives you with the same distance and speed and a clear runway; a wrong answer ends the round. Hearts stay broken after a revive. After the third revive, the next collision ends the round without a quiz. Restart resets distance and restores all hearts.
-- Floating chip platforms form varied rising and falling routes, with short steps and occasional wider decks carrying transistors. Land on the glowing tops and jump across the dark gaps.
-- Collectible hearts appear along the course at `d(n) = 500n + 100(n - 1)` meters: 500, 1,100, 1,700, 2,300, 2,900, and so on, only when a heart is missing as that pickup enters the screen. Full hearts skip that pickup without shifting the schedule. Touch one to restore one spent heart, up to three total; missed hearts give no healing. Refills allow additional revives, and restarting resets the pickup schedule.
+Space, Up, W, or tap jumps. Hold to jump on landing. P pauses; leaving the window pauses automatically. Existing floating platforms, gaps, accelerating movement, three revive hearts, and pickups remain. Refills appear at 500 m, 1,100 m, then every 600 m while hearts are missing.
 
-The cube uses a fixed jump impulse and gravity with no midair double jump. This is an original approximation of the arcade feel, not a reproduction of Geometry Dash's exact physics or assets.
+Six 600 m levels follow a winding map: CPU, Control Unit, Registers, ALU, Cache, and Clock. Only the first is initially available. Reaching the exit flag clears the level; returning to the map unlocks the next stop. Cleared levels can be replayed. Map progress lasts for the current page session. Each level starts with a lesson and a fresh three hearts. A crash costs a heart and presents a question from that level. Wrong answers give an explanation and one recovery question; a second wrong answer ends the attempt. Retry restarts the current level, preserving map unlocks. Correct answers clear nearby hazards before resuming. Clearing the final level brings the boy home. Music and the bug chase continue across the adventure.
 
-Run `node --test game.test.cjs` to check the quiz, distance, restart, and pause flows in a simulated browser environment. These checks do not replace a visual playtest.
+The character, chasing corruption bug, music, and graphics are original procedural assets. The current fixed-timestep Canvas engine is retained; Phaser is listed as a dependency but this version does not use it. A Phaser migration remains part of the pitch rather than the current implementation.
+
+Run node --test game.test.cjs for the simulated-browser regression suite. It covers physics, pause, hearts, recovery, intro, all stage gates, and victory. A real browser visual/audio playtest is still needed.
+
+The route map is illustrated as a motherboard with a magnified processor interior. CPU, Control Unit, register bank, ALU, cache, and clock landmarks have distinct vector icons. The Back to map button is available throughout a level, including lessons and quizzes. It freezes the attempt and asks for confirmation. Keep playing or Escape restores the exact previous screen. Confirming discards the attempt; re-entering starts that level at its beginning with fresh hearts, while completed-level unlocks remain.
+
+The home screen now features an original pixel-art bedroom with a boy at his computer. Begin the story plays five illustrated cutscene phases: bedroom, shaking, pull/poof, trapped inside, and the escape objective. Reduced-motion settings disable shaking and fades. The animation uses Canvas primitives and shares no assets with referenced games. The soundtrack contains eight original procedural compositions: a quiet bedroom theme, Circuit Atlas for the map, and Boot Run, Signal Orders, Bit Vault, Logic Reactor, Fast Lane, and Last Cycle for the six levels. Arcade arpeggios mark trapping, teleportation, arrival, answers, and level completion. Music begins after interacting with the home screen; the music toggle mutes both music and effects. Browser visual/audio playtesting is still required.
+
+The story now ends with a walk-out transition, followed by the boy stepping onto a low-resolution 400 x 220 pixel map. Use arrows or WASD to travel along the copper bus (right/up forward, left/down backward), and Enter or Space to start a level when standing at its component. Locked routes block movement. Touch users can hold the WALK buttons and use the Enter button. Optional destination buttons walk the boy to a component; they do not start a level remotely. Returning from a level places the boy at that component. Map movement stops on blur.

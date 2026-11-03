@@ -1,0 +1,33 @@
+/* Low-resolution overworld. Travel follows the copper bus; gates block uncleared routes. */
+(()=>{
+const canvas=document.getElementById('map-canvas'),ctx=canvas.getContext('2d'),nodes=document.getElementById('map-nodes'),status=document.getElementById('map-status'),enter=document.getElementById('map-enter');
+const stations=[[45,160],[110,85],[175,150],[235,70],[300,135],[355,55]],path=[stations[0]],stops=[0];let length=0;
+for(let i=1;i<stations.length;i++){const a=stations[i-1],b=stations[i],mid=Math.round((a[0]+b[0])/2);for(const p of [[mid,a[1]],[mid,b[1]],b]){const q=path[path.length-1];length+=Math.hypot(p[0]-q[0],p[1]-q[1]);path.push(p);}stops.push(length);}
+let completed=0,distance=0,limit=0,target=null,direction=0,arrival=0,clock=0,onEnter=()=>{};
+function position(d){for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],n=Math.hypot(b[0]-a[0],b[1]-a[1]);if(d<=n)return [a[0]+(b[0]-a[0])*d/n,a[1]+(b[1]-a[1])*d/n];d-=n;}return stations[5];}
+function nearby(){return stops.findIndex((d,i)=>i<=limit&&Math.abs(d-distance)<6);}
+function prompt(){const i=nearby();enter.disabled=arrival>0||i<0;enter.textContent=i>=0?'Enter '+cpuStages[i].name:'Walk to a component';status.textContent=completed>=cpuStages.length?'Every route cleared. The boy can finally go home.':arrival>0?'The boy steps onto the circuit map...':i>=0?cpuStages[i].name+' / '+(i<limit?'Cleared route. Replay or keep walking.':'Press Enter to begin. Finish this route to open the next path.'):'Follow the copper path. Arrow keys / WASD to walk. Enter at a component.';}
+function travel(i){if(i>limit||arrival>0)return;target=stops[i];direction=0;canvas.focus();}
+function activate(){const i=nearby();if(arrival<=0&&i>=0)onEnter(i);}
+function show(config){completed=config.unlocked;limit=Math.min(config.unlocked,5);distance=stops[Math.min(config.current,limit)];onEnter=config.onEnter;arrival=config.arrival&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?1.3:0;clock=0;target=null;direction=0;nodes.replaceChildren();cpuStages.forEach((s,i)=>{const b=document.createElement('button');b.className='map-location '+(i>limit?'locked':i<config.unlocked?'cleared':'current');b.disabled=i>limit;b.textContent=String(i+1).padStart(2,'0')+' '+s.name+(i>limit?' / LOCKED':i<config.unlocked?' / CLEARED':' / OPEN');b.addEventListener('click',()=>travel(i));nodes.append(b);});prompt();canvas.focus();draw();}
+function update(dt){clock+=dt;if(arrival>0){arrival=Math.max(0,arrival-dt);prompt();return;}let delta=direction*52*dt;if(target!==null){const diff=target-distance;delta=Math.sign(diff)*Math.min(Math.abs(diff),52*dt);if(Math.abs(diff)<.01)target=null;}const next=Math.max(0,Math.min(stops[limit],distance+delta));if(next!==distance){distance=next;prompt();}}
+function move(value){direction=value;target=null;}
+function key(e,down){const forward=['ArrowRight','ArrowUp','KeyD','KeyW'],back=['ArrowLeft','ArrowDown','KeyA','KeyS'];if(forward.includes(e.code)||back.includes(e.code)){e.preventDefault();if(down)move(forward.includes(e.code)?1:-1);else direction=0;return true;}if(down&&['Enter','Space'].includes(e.code)){e.preventDefault();if(!e.repeat)activate();return true;}return false;}
+function draw(){ctx.imageSmoothingEnabled=false;const r=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h);};r(0,0,400,220,'#0c2022');for(let y=0;y<220;y+=8)for(let x=0;x<400;x+=8){r(x,y,7,7,(x*7+y*13)%24===0?'#173339':'#10272a');}for(let row=0;row<9;row++){const y=12+row*22;r(0,y,400,1,'#25473f');for(let x=20;x<400;x+=66){r(x,y,2,11,'#25473f');r(x-2,y-2,5,5,'#667552');r(x-1,y-1,3,3,'#162e2b');}}
+r(80,28,302,155,'#07171e');r(83,31,296,149,'#38494a');r(86,34,290,143,'#152d35');
+for(let x=90;x<380;x+=8){r(x,26,3,6,'#8b876a');r(x,180,3,6,'#8b876a');}for(let y=38;y<177;y+=8){r(77,y,6,3,'#8b876a');r(382,y,6,3,'#8b876a');}
+for(let x=22;x<80;x+=26){r(x,44,15,22,'#2c424b');r(x,40,15,8,'#71817f');r(x+4,43,7,2,'#bcc0a1');}r(116,195,172,14,'#455637');for(let x=121;x<280;x+=27){r(x,198,19,7,'#142027');r(x,209,18,3,'#b8a47d');}
+ctx.lineJoin='miter';ctx.lineCap='butt';ctx.beginPath();path.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.strokeStyle='#061319';ctx.lineWidth=12;ctx.stroke();ctx.strokeStyle='#756b50';ctx.lineWidth=6;ctx.stroke();ctx.strokeStyle='#c5ae7b';ctx.lineWidth=2;ctx.stroke();
+for(let i=0;i<6;i++){const [x,y]=stations[i],color=i>limit?'#576469':i<limit?'#dfc18b':'#a8ffd5';r(x-17,y-17,34,34,'#08181e');r(x-15,y-15,30,30,color);r(x-13,y-13,26,26,'#21313c');for(let p=-9;p<14;p+=6){r(x+p,y-20,3,5,color);r(x+p,y+15,3,5,color);}
+if(i===0){r(x-8,y-8,16,16,'#748587');r(x-5,y-5,10,10,'#233c43');}
+if(i===1){r(x-8,y-9,4,4,color);r(x-6,y-5,2,12,color);r(x-4,y+5,13,2,color);r(x+5,y+2,5,5,color);}
+if(i===2){for(let b=-8;b<10;b+=6){r(x-9,y+b,18,4,'#7c8d9c');for(let q=-6;q<8;q+=5)r(x+q,y+b+1,2,2,'#26303c');}}
+if(i===3){for(let b=0;b<15;b++)r(x-9+Math.floor(b/3),y-9+b,18-Math.floor(b/3)*2,1,color);r(x-1,y+6,2,6,color);}
+if(i===4){for(let yy=-7;yy<9;yy+=9)for(let xx=-8;xx<9;xx+=10)r(x+xx,y+yy,7,6,'#a294b5');}
+if(i===5){r(x-8,y-8,16,16,'#798987');r(x-6,y-6,12,12,'#182b34');r(x,y-4,2,7,color);r(x,y+1,5,2,color);}
+ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(cpuStages[i].name,x,y+29);if(i>limit){r(x-3,y-4,6,8,'#38434d');r(x-2,y-6,4,2,'#bac0af');}}
+let [px,py]=position(distance);if(arrival>0){px-=arrival*29;py+=arrival*10;}const walking=arrival>0||direction!==0||target!==null;const stride=walking?Math.floor(clock*9)%2:0;const boy=['...hhhh...','..hhhhhh..','..hssss...','..hsees...','...ssss...','..cccccc..','.cccccccc.','..cccccc..','...cccc...','...l..l...','..ll..ll..'];r(px-6,py+2,13,3,'#08151b');boy.forEach((row,y)=>[...row].forEach((c,x)=>{const color={h:'#69424b',s:'#dfac8f',e:'#211b2c',c:'#a8bbdb',l:'#666886'}[c];if(color)r(px-5+x,py-11+y+(y>8?((x<5?stride:-stride)):0),1,1,color);}));ctx.fillStyle='#b3cab4';ctx.textAlign='left';ctx.font='6px monospace';ctx.fillText('SYSTEM BOARD / PROCESSOR INTERIOR',8,13);ctx.fillText('I/O > HOME',325,209);
+}
+enter.addEventListener('click',activate);for(const [id,value] of [['map-prev',-1],['map-next',1]]){const b=document.getElementById(id);b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);move(value);});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>move(0));b.addEventListener('keydown',e=>{if(['Enter','Space'].includes(e.code)){e.preventDefault();move(value);}});b.addEventListener('keyup',()=>move(0));}
+window.cpuMap={show,update,draw,key,stop(){direction=0;target=null;},inspect:()=>({distance,limit,arrival,nearby:nearby()})};
+})();

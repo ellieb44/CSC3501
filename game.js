@@ -6,6 +6,9 @@ const ui=Object.fromEntries(['overlay','eyebrow','title','description','answers'
 const W=1280,H=720,FLOOR=570,SIZE=42,X=220,STEP=1/120;
 canvas.width=W;canvas.height=H;
 let state='ready',distance=0,elapsed=0,speed=360,best=0,y=FLOOR-SIZE,vy=0,angle=0,held=false,buffer=0,obstacles=[],nextSpawn=850,invincible=0,lastQuestion=-1,accumulator=0,previous=0,action=start;
+let unlocked=0,storyTime=0,storyPage=0;
+let stageIndex=0,gateAt=6000,gate=false,recovery=false,correctCount=0,attempts=0;
+const stageData=()=>cpuStages[stageIndex];
 let platforms=[],gaps=[],grounded=true,spawnCount=0;
 const MAX_REVIVES=3;
 let revives=MAX_REVIVES;
@@ -32,34 +35,49 @@ function updatePickups(){
 const hearts=Array.from({length:MAX_REVIVES},()=>{const heart=document.createElement('span');ui.hearts.append(heart);return heart;});
 function showHearts(){hearts.forEach((heart,i)=>{heart.textContent=i<revives?'♥':'💔';heart.className=i<revives?'heart':'heart lost';});ui.hearts.ariaLabel=`${revives} of ${MAX_REVIVES} revives remaining`;}
 try{best=Number(localStorage.getItem('cpuEscapeBest'))||0;}catch{}
-function hud(){ui.score.textContent=Math.floor(distance/10);ui.best.textContent=`BEST ${best} m`;ui.speed.textContent=`${(speed/360).toFixed(2)}× SPEED`;showHearts();}
+function hud(){document.getElementById('chapter').textContent=`${String(stageIndex+1).padStart(2,'0')} / ${stageData().name} / ${Math.min(100,Math.floor((distance-(gateAt-6000))/6000*100))}%`;ui.score.textContent=Math.floor(distance/10);ui.best.textContent=`BEST ${best} m`;ui.speed.textContent=`${(speed/360).toFixed(2)}× SPEED`;showHearts();}
 function save(){best=Math.max(best,Math.floor(distance/10));try{localStorage.setItem('cpuEscapeBest',String(best));}catch{}}
 function modal(label,title,description,button,callback){held=false;buffer=0;ui.overlay.hidden=false;ui.eyebrow.textContent=label;ui.title.textContent=title;ui.description.textContent=description;ui.answers.replaceChildren();ui.feedback.textContent='';ui.action.textContent=button;ui.action.hidden=!button;action=callback;if(button)ui.action.focus();}
-function resume(){state='running';held=false;buffer=0;ui.overlay.hidden=true;}
-function start(){ui.home.hidden=true;ui.stage.hidden=false;ui.controls.hidden=false;ui.hud.hidden=false;revives=MAX_REVIVES;pickups=[];heartNumber=1;distance=0;elapsed=0;speed=360;y=FLOOR-SIZE;vy=0;angle=0;obstacles=[];platforms=[];gaps=[];grounded=true;spawnCount=0;nextSpawn=850;invincible=0;resume();hud();canvas.focus();}
-ui.action.addEventListener('click',()=>action?.());
-ui.start.addEventListener('click',start);
+function resume(){ui.controls.hidden=false;ui.hud.hidden=false;state='running';held=false;buffer=0;ui.overlay.hidden=true;}
+function start(){window.cpuAudio?.setScene(0);document.getElementById('level-toolbar').hidden=false;document.getElementById('world-map').hidden=true;ui.stage.classList.remove('story-mode');stageIndex=0;gateAt=6000;gate=false;recovery=false;correctCount=0;attempts=0;ui.home.hidden=true;ui.stage.hidden=false;ui.controls.hidden=false;ui.hud.hidden=false;revives=MAX_REVIVES;pickups=[];heartNumber=1;distance=0;elapsed=0;speed=360;y=FLOOR-SIZE;vy=0;angle=0;obstacles=[];platforms=[];gaps=[];grounded=true;spawnCount=0;nextSpawn=850;invincible=0;resume();hud();canvas.focus();}
+ui.action.addEventListener('click',()=>{ui.overlay.style.opacity='1';action?.();});
+function lesson(){document.getElementById('level-location').textContent='LEVEL '+(stageIndex+1)+' / '+stageData().name;state='lesson';modal('SECTOR '+(stageIndex+1)+' / '+stageData().name,stageData().name,stageData().lesson,'Run this sector ?',resume);}
+const story=[['Welcome to CPU Escape.','Just a boy, his bedroom, and one more night at the computer.'],['Something is wrong.','The screen hums. The computer shakes. Then he starts shaking, too.'],['POOF!','A strange force pulls him toward the screen... and the boy disappears.'],['OH NO!','You are trapped inside the computer! And something is coming for you.'],['Find your way home.','Outrun the bug. Cross each computer component. Reach every exit to escape alive.']];
+function storyCard(){if(storyPage===1)window.cpuAudio?.effect('stuck');if(storyPage===2)window.cpuAudio?.effect('portal');if(storyPage===3)window.cpuAudio?.effect('arrival');const card=story[storyPage];modal('CPU ESCAPE / PROLOGUE',card[0],card[1],'Skip story / Walk to map',walkToMap);}
+function intro(){window.cpuAudio?.setScene('home');document.getElementById('level-toolbar').hidden=true;window.cpuAudio?.start();ui.home.hidden=true;ui.stage.hidden=false;ui.hud.hidden=true;ui.controls.hidden=true;ui.stage.classList.add('story-mode');state='intro';storyPage=0;storyTime=0;storyCard();}
+function storyStep(dt){storyTime+=dt;const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;const opacity=reduced?1:Math.min(1,storyTime/.85,(5.8-storyTime)/.85);ui.overlay.style.opacity=String(Math.max(0,opacity));if(storyTime>=5.8){storyPage++;storyTime=0;if(storyPage>=story.length)walkToMap();else storyCard();}}
+let transitionTime=0;
+function walkToMap(){state='map-transition';transitionTime=0;held=false;ui.overlay.hidden=false;ui.action.hidden=true;ui.title.textContent='Follow the signal.';ui.description.textContent='The boy steps onto a path through the computer.';ui.overlay.style.opacity='1';if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)showMap(true);}
+function showMap(arrival=false){window.cpuAudio?.setScene('map');document.getElementById('level-toolbar').hidden=true;state='map';held=false;buffer=0;ui.overlay.style.opacity='1';ui.stage.classList.remove('story-mode');ui.stage.hidden=true;ui.hud.hidden=true;ui.controls.hidden=true;ui.home.hidden=true;document.getElementById('world-map').hidden=false;window.cpuMap.show({unlocked,current:stageIndex,arrival,onEnter:enterLevel});}
+function enterLevel(index){if(index>unlocked)return;start();stageIndex=index;window.cpuAudio?.setScene(index);distance=index*6000;gateAt=(index+1)*6000;nextSpawn=distance+850;heartNumber=1;while(heartDistance(heartNumber)*10<distance)heartNumber++;lesson();ui.hud.hidden=true;hud();}
+ui.start.addEventListener('click',()=>intro());
 ui.hud.hidden=true;ui.stage.hidden=true;ui.controls.hidden=true;
-function pause(){if(state!=='running')return;state='paused';modal('CIRCUIT / PAUSED','Catch your breath.','Your distance and speed are preserved.','Resume →',resume);}
-function crash(){
- if(state!=='running')return;
- save();
- if(revives===0){state='over';hud();modal('CIRCUIT / GAME OVER','No revives left.',`Round ended at ${Math.floor(distance/10)} m. No hearts remaining.`,'Restart from 0 m →',start);return;}
- revives--;state='quiz';hud();
- let index=Math.floor(Math.random()*cpuQuestions.length);if(index===lastQuestion)index=(index+1)%cpuQuestions.length;lastQuestion=index;
- const q=cpuQuestions[index];
- modal('COLLISION / CPU CHECK',q.question,`Heart lost. Answer correctly to revive at ${Math.floor(distance/10)} m. Wrong: round over. ${revives} spare revive${revives===1?'':'s'} after this one.`,'',null);
- q.options.forEach((option,i)=>{const b=document.createElement('button');b.textContent=`${String.fromCharCode(65+i)}. ${option}`;b.addEventListener('click',()=>{
-  if(state!=='quiz')return;const correct=i===q.correctAnswer;state=correct?'saved':'over';
-  [...ui.answers.children].forEach((button,n)=>{button.disabled=true;if(n===q.correctAnswer)button.classList.add('correct');});if(!correct)b.classList.add('wrong');
-  ui.eyebrow.textContent=correct?'CPU CHECK / PASSED':'CPU CHECK / FAILED';ui.feedback.textContent=(correct?'Correct! Run preserved. ':'Run ended. ')+q.explanation;
-  ui.action.hidden=false;ui.action.textContent=correct?'Continue run →':'Restart from 0 m →';
-  action=correct?()=>{obstacles=obstacles.filter(o=>o.x>X+speed*1.3);platforms=[];gaps=[];grounded=true;nextSpawn=Math.max(nextSpawn,distance+speed*1.6);y=FLOOR-SIZE;vy=0;angle=0;invincible=.8;resume();}:start;ui.action.focus();
- });ui.answers.append(b);});ui.answers.firstElementChild.focus();
+// A separate dialog preserves the exact quiz, lesson, or pause screen underneath.
+const leaveDialog=document.getElementById('leave-confirm'),stayButton=document.getElementById('stay-level');
+let previousLevelState;
+function requestMap(){if(['ready','intro','map','confirm-leave'].includes(state))return;previousLevelState=state;state='confirm-leave';held=false;buffer=0;leaveDialog.hidden=false;ui.stage.inert=true;document.getElementById('back-map').disabled=true;stayButton.focus();}
+function cancelMap(){if(state!=='confirm-leave')return;state=previousLevelState;leaveDialog.hidden=true;ui.stage.inert=false;document.getElementById('back-map').disabled=false;document.getElementById('back-map').focus();}
+document.getElementById('back-map').addEventListener('click',requestMap);
+stayButton.addEventListener('click',cancelMap);
+document.getElementById('leave-level').addEventListener('click',()=>{if(state!=='confirm-leave')return;leaveDialog.hidden=true;ui.stage.inert=false;document.getElementById('back-map').disabled=false;showMap();});
+leaveDialog.addEventListener('keydown',e=>{if(e.code==='Escape'){e.preventDefault();cancelMap();}if(e.code==='Tab'){e.preventDefault();(document.activeElement===stayButton?document.getElementById('leave-level'):stayButton).focus();}});
+function pause(){if(state==='map'){window.cpuMap.stop();return;}if(state!=='running')return;state='paused';modal('CIRCUIT / PAUSED','Catch your breath.','Your distance and speed are preserved.','Resume →',resume);}
+function clearRunway(){obstacles=[];platforms=[];gaps=[];grounded=true;nextSpawn=distance+speed*2;y=FLOOR-SIZE;vy=0;invincible=1.5;resume();}
+function completeGate(){window.cpuAudio?.effect('clear');save();unlocked=Math.max(unlocked,stageIndex+1);gate=false;state='cleared';if(unlocked>=cpuStages.length&&stageIndex===cpuStages.length-1){state='won';modal('COMPUTER / ESCAPE SUCCESSFUL','The boy is finally home.',`All ${cpuStages.length} routes cleared. You outran the bug and learned how the computer works. First-answer accuracy this run: ${correctCount}/${attempts}.`,'Return to map',showMap);return;}modal('LEVEL / CLEARED',stageData().name+' complete!',cpuStages[stageIndex+1].name+' is now unlocked. The bug is still out there. Choose your next stop on the map.','Return to map',showMap);}
+function askQuestion(isRecovery=false){
+ state='quiz';recovery=isRecovery;const ids=stageData().ids;let index=ids[Math.floor(Math.random()*ids.length)];if(index===lastQuestion)index=ids[(ids.indexOf(index)+1)%ids.length];lastQuestion=index;const q=cpuQuestions[index];
+ modal((gate?'SECTOR GATE':'BUG ENCOUNTER')+(isRecovery?' / RECOVERY':' / CPU CHECK'),q.question,isRecovery?'One more chance. Use the explanation you just learned.':gate?'Prove what you learned to open the next sector.':'The bug caught you. Answer to escape. A wrong answer gives you an explanation and one recovery question.','',null);
+ q.options.forEach((option,i)=>{const button=document.createElement('button');button.textContent=String.fromCharCode(65+i)+'. '+option;button.addEventListener('click',()=>{
+ if(state!=='quiz')return;const correct=i===q.correctAnswer;if(!isRecovery){attempts++;if(correct)correctCount++;}state=correct?'saved':isRecovery?'over':'review';
+ [...ui.answers.children].forEach((b,n)=>{b.disabled=true;if(n===q.correctAnswer)b.classList.add('correct');});if(!correct)button.classList.add('wrong');
+ ui.eyebrow.textContent=correct?'SIGNAL RESTORED':isRecovery?'SIGNAL LOST':'LEARN / TRY AGAIN';ui.feedback.textContent=(correct?'Correct. ':isRecovery?'Run ended. ':'Study this: ')+q.explanation;
+ ui.action.hidden=false;ui.action.textContent=correct?(gate?'Open gate ?':'Escape the bug ?'):isRecovery?'Retry this level':'Try recovery question ?';action=correct?(gate?completeGate:clearRunway):isRecovery?()=>enterLevel(stageIndex):()=>askQuestion(true);ui.action.focus();window.cpuAudio?.effect(correct?'correct':'wrong');
+ });ui.answers.append(button);});ui.answers.firstElementChild.focus();
 }
+function crash(){if(state!=='running')return;window.cpuAudio?.effect('stuck');save();if(revives===0){state='over';hud();modal('SYSTEM / GAME OVER','No revives left.',`The bug caught your signal at ${Math.floor(distance/10)} m.`,'Retry this level',()=>enterLevel(stageIndex));return;}revives--;gate=false;hud();askQuestion();}
 function press(){if(state==='running'){held=true;buffer=.12;}}
-window.addEventListener('keydown',e=>{if(['Space','ArrowUp','KeyW'].includes(e.code)){e.preventDefault();if(!e.repeat)press();}if(e.code==='KeyP'&&!e.repeat){if(state==='paused')resume();else pause();}});
-window.addEventListener('keyup',e=>{if(['Space','ArrowUp','KeyW'].includes(e.code))held=false;});
+window.addEventListener('keydown',e=>{if(state==='map'){if(e.target?.tagName==='BUTTON'&&['Enter','Space'].includes(e.code))return;window.cpuMap.key(e,true);return;}if(['Space','ArrowUp','KeyW'].includes(e.code)&&state==='running'){e.preventDefault();if(!e.repeat)press();}if(e.code==='KeyP'&&!e.repeat){if(state==='paused')resume();else pause();}});
+window.addEventListener('keyup',e=>{if(state==='map'){window.cpuMap.key(e,false);return;}if(['Space','ArrowUp','KeyW'].includes(e.code))held=false;});
 canvas.addEventListener('pointerdown',e=>{e.preventDefault();canvas.setPointerCapture(e.pointerId);press();});canvas.addEventListener('pointerup',()=>held=false);canvas.addEventListener('pointercancel',()=>held=false);
 window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
 function spawn(){
@@ -87,9 +105,10 @@ function spawn(){
 }
 function fall(){crash();}
 function collision(o){const base=o.base??FLOOR,left=X+6,right=X+SIZE-6,top=y+5,bottom=y+SIZE-3;if(right<=o.x||left>=o.x+o.w||bottom<=base-o.h||top>=base)return false;return true;}
-function step(dt){if(state!=='running')return;elapsed+=dt;speed=360+260*(1-Math.exp(-elapsed/100));distance+=speed*dt;invincible=Math.max(0,invincible-dt);buffer=Math.max(0,buffer-dt);
+function step(dt){if(state==='map'){window.cpuMap.update(dt);return;}if(state==='map-transition'){transitionTime+=dt;ui.overlay.style.opacity=String(Math.max(0,1-transitionTime/1.7));if(transitionTime>=1.8)showMap(true);return;}if(state==='intro'){storyStep(dt);return;}if(state!=='running')return;elapsed+=dt;speed=360+260*(1-Math.exp(-elapsed/100));distance+=speed*dt;invincible=Math.max(0,invincible-dt);buffer=Math.max(0,buffer-dt);
  if(grounded&&(held||buffer>0)){vy=-830;buffer=0;grounded=false;}
  const previousBottom=y+SIZE;vy+=2400*dt;y+=vy*dt;
+ if(distance>=gateAt){distance=gateAt;completeGate();hud();return;}
  if(distance>=nextSpawn)spawn();
  for(const items of [obstacles,platforms,gaps]){for(const o of items)o.x-=speed*dt;}
  obstacles=obstacles.filter(o=>o.x+o.w>-30);platforms=platforms.filter(o=>o.x+o.w>-30);gaps=gaps.filter(o=>o.x+o.w>-30);
@@ -108,8 +127,8 @@ function step(dt){if(state!=='running')return;elapsed+=dt;speed=360+260*(1-Math.
  if(grounded)angle=Math.round(angle/(Math.PI/2))*Math.PI/2;else angle+=Math.PI*2*dt/.7;
  if(!invincible&&obstacles.some(collision))crash();hud();
 }
-function draw(){
- const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0b1534');bg.addColorStop(1,'#153e56');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.lineWidth=1;ctx.strokeStyle='#31557744';
+function draw(){if(state==='map'){window.cpuMap.draw();return;}if(state==='map-transition'){window.cpuOpening?.draw(ctx,W,H,4,transitionTime,Math.min(1,transitionTime/1.8));return;}if(state==='ready')window.cpuOpening?.home(previous/1000);if(state==='intro'){window.cpuOpening?.draw(ctx,W,H,storyPage,storyTime);return;}
+ const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#100d1c');bg.addColorStop(1,['#19372f','#24372f','#222c49','#44301e','#332144','#401e30'][stageIndex]);ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.lineWidth=1;ctx.strokeStyle='#31557744';
  for(let x=-(distance*.22%80);x<W;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let yy=10;yy<H;yy+=80){ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(W,yy);ctx.stroke();}
  // Repeating motherboard panels scroll behind the playfield at a slower speed.
  const boardOffset=distance*.18%640;
@@ -178,24 +197,22 @@ function draw(){
   ctx.beginPath();ctx.moveTo(0,14);ctx.bezierCurveTo(-30,-3,-15,-24,0,-10);ctx.bezierCurveTo(15,-24,30,-3,0,14);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
   ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('+1',0,-27);ctx.restore();
  }
- // A circuit-board bug, drawn inside the original player footprint.
- ctx.save();ctx.translate(X+SIZE/2,y+SIZE/2);ctx.rotate(angle);ctx.globalAlpha=invincible>0?.55+.45*Math.sin(invincible*30)**2:1;
- ctx.strokeStyle='#64ffe2';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
- // Six bent legs, with a small running motion while grounded.
- const stride=vy===0&&state==='running'?Math.sin(distance*.09)*2:0;
- for(const side of [-1,1])for(let i=0;i<3;i++){
-  const yy=-7+i*10;ctx.beginPath();ctx.moveTo(side*10,yy);ctx.lineTo(side*17,yy-3+stride*(i%2?1:-1));ctx.lineTo(side*20,yy+3);ctx.stroke();
- }
- // Antennae and bright terminal tips.
- for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*6,-12);ctx.lineTo(side*12,-20);ctx.stroke();ctx.fillStyle='#effffb';ctx.beginPath();ctx.arc(side*12,-20,2,0,Math.PI*2);ctx.fill();}
- ctx.shadowColor='#63ffe1';ctx.shadowBlur=16;ctx.fillStyle='#64ffe2';ctx.beginPath();ctx.ellipse(0,4,13,16,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
- ctx.strokeStyle='#cafff2';ctx.lineWidth=1.5;ctx.stroke();
- // Wing seam and chip traces give the beetle a computer-bug look.
- ctx.strokeStyle='#147263';ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(0,18);ctx.stroke();
- for(const side of [-1,1])for(const yy of [2,10]){ctx.beginPath();ctx.moveTo(side*3,yy);ctx.lineTo(side*8,yy);ctx.lineTo(side*9,yy-3);ctx.stroke();}
- ctx.fillStyle='#153a50';ctx.beginPath();ctx.ellipse(0,-10,11,8,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#64ffe2';ctx.stroke();
- ctx.fillStyle='#effffb';for(const side of [-1,1]){ctx.beginPath();ctx.arc(side*4,-12,2.5,0,Math.PI*2);ctx.fill();}
- ctx.restore();
+ // The finish flag approaches at the exact level endpoint.
+ const finishX=X+(gateAt-distance);
+ if(finishX<W+80){ctx.fillStyle='#f6efde';ctx.fillRect(finishX,FLOOR-145,5,145);ctx.fillStyle=stageData().color;ctx.fillRect(finishX+5,FLOOR-145,65,38);ctx.fillStyle='#14111d';ctx.font='bold 12px monospace';ctx.textAlign='left';ctx.fillText('EXIT',finishX+16,FLOOR-120);}
+ // Original pixel sprites: a small signal courier and the corruption chasing it.
+ const tint=stageData().color;
+ ctx.fillStyle=tint;ctx.globalAlpha=.12;ctx.font='bold 72px monospace';ctx.textAlign='center';ctx.fillText(stageData().name,W/2,110);ctx.globalAlpha=.5;ctx.font='14px monospace';ctx.fillText(stageData().landmark,W/2,144);ctx.globalAlpha=1;
+ function sprite(rows,px,py,scale,palette){rows.forEach((row,yy)=>[...row].forEach((c,xx)=>{if(palette[c]){ctx.fillStyle=palette[c];ctx.fillRect(Math.round(px+xx*scale),Math.round(py+yy*scale),scale,scale);}}));}
+ const bob=state==='running'?Math.floor(Math.sin(distance*.07)*2):0;
+ const bugX=state==='quiz'?X-80:65+Math.sin(elapsed*2)*12;
+ sprite(['..r....r..','r.rrrrrr.r','.rrrrrrrr.','rrwrrwrr.r','.rrrrrrrr.','r.rrrrrr.r','..r.rr.r..','.r......r.'],bugX,FLOOR-64+bob,7,{r:'#a55584',w:'#fff1d5'});
+ ctx.globalAlpha=invincible>0?.6:1;
+ sprite(['...hhhh...','..hhhhhh..','..hssssh..','...seses..','...ssss...','..cccccc..','.cccccccc.','..cccccc..','...cccc...','...l..l...'],X,y+bob,4,{h:'#ece3d0',s:'#e5b88f',e:'#191326',c:tint,l:'#9180ac'});ctx.globalAlpha=1;
+ ctx.fillStyle='#ffe8c4';ctx.fillRect(X-10,y+22+bob,10,5);ctx.fillRect(X-20,y+25+bob,7,4);
+ // Subtle scanlines unify the scene without obscuring hazards.
+ ctx.fillStyle='#00000015';for(let sy=0;sy<H;sy+=4)ctx.fillRect(0,sy,W,1);
+
 }
 function frame(time){const dt=previous?Math.min((time-previous)/1000,.1):0;previous=time;accumulator+=dt;while(accumulator>=STEP){step(STEP);accumulator-=STEP;}draw();requestAnimationFrame(frame);}
 hud();requestAnimationFrame(frame);
