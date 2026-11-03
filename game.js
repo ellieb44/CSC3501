@@ -2,29 +2,59 @@
 (() => {
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
-const ui=Object.fromEntries(['overlay','eyebrow','title','description','answers','feedback','action','score','best','speed'].map(id=>[id,document.getElementById(id)]));
+const ui=Object.fromEntries(['overlay','eyebrow','title','description','answers','feedback','action','score','best','speed','hearts','hud','home','stage','controls','start'].map(id=>[id,document.getElementById(id)]));
 const W=1280,H=720,FLOOR=570,SIZE=42,X=220,STEP=1/120;
 canvas.width=W;canvas.height=H;
 let state='ready',distance=0,elapsed=0,speed=360,best=0,y=FLOOR-SIZE,vy=0,angle=0,held=false,buffer=0,obstacles=[],nextSpawn=850,invincible=0,lastQuestion=-1,accumulator=0,previous=0,action=start;
+let platforms=[],gaps=[],grounded=true,spawnCount=0;
+const MAX_REVIVES=3;
+let revives=MAX_REVIVES;
+let pickups=[],heartNumber=1;
+const heartDistance=n=>500*n+100*(n-1);
+function updatePickups(){
+ // Distance uses ten world pixels per displayed meter. Preview each pickup
+ // ahead of time so it reaches the player at its scheduled meter mark.
+ while(X+SIZE/2+heartDistance(heartNumber)*10-distance<=W+30){
+  if(revives<MAX_REVIVES)pickups.push({at:heartDistance(heartNumber),x:0,y:0});
+  heartNumber++;
+ }
+ if(revives===MAX_REVIVES)pickups=[];
+ for(const heart of pickups){
+  heart.x=X+SIZE/2+heart.at*10-distance;
+  let surface=FLOOR;
+  for(const p of platforms)if(heart.x>=p.x&&heart.x<=p.x+p.w)surface=Math.min(surface,FLOOR-p.h);
+  heart.y=surface-52;
+  const touches=heart.x+16>X&&heart.x-16<X+SIZE&&heart.y+16>y&&heart.y-16<y+SIZE;
+  if(touches){revives=Math.min(MAX_REVIVES,revives+1);heart.collected=true;}
+ }
+ pickups=pickups.filter(heart=>!heart.collected&&heart.x>-30);
+}
+const hearts=Array.from({length:MAX_REVIVES},()=>{const heart=document.createElement('span');ui.hearts.append(heart);return heart;});
+function showHearts(){hearts.forEach((heart,i)=>{heart.textContent=i<revives?'♥':'💔';heart.className=i<revives?'heart':'heart lost';});ui.hearts.ariaLabel=`${revives} of ${MAX_REVIVES} revives remaining`;}
 try{best=Number(localStorage.getItem('cpuEscapeBest'))||0;}catch{}
-function hud(){ui.score.textContent=Math.floor(distance/10);ui.best.textContent=`BEST ${best} m`;ui.speed.textContent=`${(speed/360).toFixed(2)}× SPEED`;}
+function hud(){ui.score.textContent=Math.floor(distance/10);ui.best.textContent=`BEST ${best} m`;ui.speed.textContent=`${(speed/360).toFixed(2)}× SPEED`;showHearts();}
 function save(){best=Math.max(best,Math.floor(distance/10));try{localStorage.setItem('cpuEscapeBest',String(best));}catch{}}
 function modal(label,title,description,button,callback){held=false;buffer=0;ui.overlay.hidden=false;ui.eyebrow.textContent=label;ui.title.textContent=title;ui.description.textContent=description;ui.answers.replaceChildren();ui.feedback.textContent='';ui.action.textContent=button;ui.action.hidden=!button;action=callback;if(button)ui.action.focus();}
 function resume(){state='running';held=false;buffer=0;ui.overlay.hidden=true;}
-function start(){distance=0;elapsed=0;speed=360;y=FLOOR-SIZE;vy=0;angle=0;obstacles=[];nextSpawn=850;invincible=0;resume();hud();}
+function start(){ui.home.hidden=true;ui.stage.hidden=false;ui.controls.hidden=false;ui.hud.hidden=false;revives=MAX_REVIVES;pickups=[];heartNumber=1;distance=0;elapsed=0;speed=360;y=FLOOR-SIZE;vy=0;angle=0;obstacles=[];platforms=[];gaps=[];grounded=true;spawnCount=0;nextSpawn=850;invincible=0;resume();hud();canvas.focus();}
 ui.action.addEventListener('click',()=>action?.());
+ui.start.addEventListener('click',start);
+ui.hud.hidden=true;ui.stage.hidden=true;ui.controls.hidden=true;
 function pause(){if(state!=='running')return;state='paused';modal('CIRCUIT / PAUSED','Catch your breath.','Your distance and speed are preserved.','Resume →',resume);}
 function crash(){
- if(state!=='running')return;state='quiz';save();hud();
+ if(state!=='running')return;
+ save();
+ if(revives===0){state='over';hud();modal('CIRCUIT / GAME OVER','No revives left.',`Round ended at ${Math.floor(distance/10)} m. No hearts remaining.`,'Restart from 0 m →',start);return;}
+ revives--;state='quiz';hud();
  let index=Math.floor(Math.random()*cpuQuestions.length);if(index===lastQuestion)index=(index+1)%cpuQuestions.length;lastQuestion=index;
  const q=cpuQuestions[index];
- modal('COLLISION / CPU CHECK',q.question,`Run saved at ${Math.floor(distance/10)} m. Correct: continue. Wrong: restart from zero.`,'',null);
+ modal('COLLISION / CPU CHECK',q.question,`Heart lost. Answer correctly to revive at ${Math.floor(distance/10)} m. Wrong: round over. ${revives} spare revive${revives===1?'':'s'} after this one.`,'',null);
  q.options.forEach((option,i)=>{const b=document.createElement('button');b.textContent=`${String.fromCharCode(65+i)}. ${option}`;b.addEventListener('click',()=>{
   if(state!=='quiz')return;const correct=i===q.correctAnswer;state=correct?'saved':'over';
   [...ui.answers.children].forEach((button,n)=>{button.disabled=true;if(n===q.correctAnswer)button.classList.add('correct');});if(!correct)b.classList.add('wrong');
   ui.eyebrow.textContent=correct?'CPU CHECK / PASSED':'CPU CHECK / FAILED';ui.feedback.textContent=(correct?'Correct! Run preserved. ':'Run ended. ')+q.explanation;
   ui.action.hidden=false;ui.action.textContent=correct?'Continue run →':'Restart from 0 m →';
-  action=correct?()=>{obstacles=obstacles.filter(o=>o.x>X+speed*1.3);nextSpawn=Math.max(nextSpawn,distance+speed*1.6);y=FLOOR-SIZE;vy=0;angle=0;invincible=.8;resume();}:start;ui.action.focus();
+  action=correct?()=>{obstacles=obstacles.filter(o=>o.x>X+speed*1.3);platforms=[];gaps=[];grounded=true;nextSpawn=Math.max(nextSpawn,distance+speed*1.6);y=FLOOR-SIZE;vy=0;angle=0;invincible=.8;resume();}:start;ui.action.focus();
  });ui.answers.append(b);});ui.answers.firstElementChild.focus();
 }
 function press(){if(state==='running'){held=true;buffer=.12;}}
@@ -32,12 +62,51 @@ window.addEventListener('keydown',e=>{if(['Space','ArrowUp','KeyW'].includes(e.c
 window.addEventListener('keyup',e=>{if(['Space','ArrowUp','KeyW'].includes(e.code))held=false;});
 canvas.addEventListener('pointerdown',e=>{e.preventDefault();canvas.setPointerCapture(e.pointerId);press();});canvas.addEventListener('pointerup',()=>held=false);canvas.addEventListener('pointercancel',()=>held=false);
 window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
-function spawn(){const block=Math.random()<.22,count=!block&&elapsed>18&&Math.random()>.55?2:1;for(let i=0;i<count;i++)obstacles.push({x:W+60+i*40,w:block?48:38,h:block?54:46,block});nextSpawn=distance+speed*(1.25+Math.random()*.65)+count*40;}
-function collision(o){const left=X+6,right=X+SIZE-6,top=y+5,bottom=y+SIZE-3;if(right<=o.x||left>=o.x+o.w||bottom<=FLOOR-o.h||top>=FLOOR)return false;if(o.block)return true;const inset=Math.max(0,FLOOR-bottom)/o.h*o.w/2;return right>o.x+inset+3&&left<o.x+o.w-inset-3;}
+function spawn(){
+ spawnCount++;
+ if(spawnCount%3===0){
+  // Curated height profiles add variety without random impossible jumps.
+  const profiles=[[56,104,152,104,56],[64,112,160,208,160,112,64],[48,96,48,128,80]];
+  const heights=profiles[Math.floor(Math.random()*profiles.length)],begin=W+60;
+  const gap=Math.round(speed*.20);
+  let cursor=begin;
+  heights.forEach((height,i)=>{
+   const hazard=i===heights.length-2&&Math.random()<.55;
+   const width=hazard?Math.round(speed*.85+70):Math.round(speed*.24+40+Math.random()*30);
+   platforms.push({x:cursor,w:width,h:height,thickness:20});
+   // Wider decks leave room to land, then jump over a mounted transistor.
+   if(hazard)obstacles.push({x:cursor+width-90,w:32,h:40,base:FLOOR-height,block:true});
+   cursor+=width+gap;
+  });
+  // Missing a floating step cannot be rescued by the floor beneath it.
+  gaps.push({x:begin+platforms[platforms.length-heights.length].w,w:cursor-gap-begin-platforms[platforms.length-heights.length].w});
+  nextSpawn=distance+(cursor-begin)+speed*1.8;
+  return;
+ }
+ const block=Math.random()<.22,count=!block&&elapsed>18&&Math.random()>.55?2:1;for(let i=0;i<count;i++)obstacles.push({x:W+60+i*40,w:block?48:38,h:block?54:46,block});nextSpawn=distance+speed*(1.25+Math.random()*.65)+count*40;
+}
+function fall(){crash();}
+function collision(o){const base=o.base??FLOOR,left=X+6,right=X+SIZE-6,top=y+5,bottom=y+SIZE-3;if(right<=o.x||left>=o.x+o.w||bottom<=base-o.h||top>=base)return false;return true;}
 function step(dt){if(state!=='running')return;elapsed+=dt;speed=360+260*(1-Math.exp(-elapsed/100));distance+=speed*dt;invincible=Math.max(0,invincible-dt);buffer=Math.max(0,buffer-dt);
- if(y>=FLOOR-SIZE&&(held||buffer>0)){vy=-830;buffer=0;}vy+=2400*dt;y+=vy*dt;
- if(y>=FLOOR-SIZE){y=FLOOR-SIZE;vy=0;angle=Math.round(angle/(Math.PI/2))*Math.PI/2;}else angle+=Math.PI*2*dt/.7;
- if(distance>=nextSpawn)spawn();for(const o of obstacles)o.x-=speed*dt;obstacles=obstacles.filter(o=>o.x+o.w>-30);if(!invincible&&obstacles.some(collision))crash();hud();
+ if(grounded&&(held||buffer>0)){vy=-830;buffer=0;grounded=false;}
+ const previousBottom=y+SIZE;vy+=2400*dt;y+=vy*dt;
+ if(distance>=nextSpawn)spawn();
+ for(const items of [obstacles,platforms,gaps]){for(const o of items)o.x-=speed*dt;}
+ obstacles=obstacles.filter(o=>o.x+o.w>-30);platforms=platforms.filter(o=>o.x+o.w>-30);gaps=gaps.filter(o=>o.x+o.w>-30);
+ updatePickups();
+ grounded=false;
+ const left=X+6,right=X+SIZE-6;
+ for(const p of platforms){
+  if(right<=p.x||left>=p.x+p.w)continue;
+  const top=FLOOR-p.h;
+  if(vy>=0&&previousBottom<=top+.01&&y+SIZE>=top){y=top-SIZE;vy=0;grounded=true;}
+  else if(y+SIZE>top+.01&&y<top+(p.thickness??p.h)&&!invincible){crash();hud();return;}
+ }
+ const overGap=gaps.some(g=>X+SIZE/2>g.x&&X+SIZE/2<g.x+g.w);
+ if(!overGap&&previousBottom<=FLOOR+.01&&y+SIZE>=FLOOR&&vy>=0){y=FLOOR-SIZE;vy=0;grounded=true;}
+ if(overGap&&y+SIZE>FLOOR+8||y>H){fall();return;}
+ if(grounded)angle=Math.round(angle/(Math.PI/2))*Math.PI/2;else angle+=Math.PI*2*dt/.7;
+ if(!invincible&&obstacles.some(collision))crash();hud();
 }
 function draw(){
  const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0b1534');bg.addColorStop(1,'#153e56');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.lineWidth=1;ctx.strokeStyle='#31557744';
@@ -80,7 +149,35 @@ function draw(){
   ctx.restore();
  }
  ctx.fillStyle='#091629';ctx.fillRect(0,FLOOR,W,H-FLOOR);ctx.shadowColor='#64ffe2';ctx.shadowBlur=16;ctx.fillStyle='#64ffe2';ctx.fillRect(0,FLOOR,W,3);ctx.shadowBlur=0;ctx.strokeStyle='#204052';for(let x=-(distance%64);x<W;x+=64)ctx.strokeRect(x,FLOOR+22,52,52);
- for(const o of obstacles){ctx.shadowColor='#ff517b';ctx.shadowBlur=14;ctx.fillStyle='#632a59';ctx.strokeStyle='#ff7595';ctx.lineWidth=3;ctx.beginPath();if(o.block)ctx.rect(o.x,FLOOR-o.h,o.w,o.h);else{ctx.moveTo(o.x,FLOOR);ctx.lineTo(o.x+o.w/2,FLOOR-o.h);ctx.lineTo(o.x+o.w,FLOOR);ctx.closePath();}ctx.fill();ctx.stroke();ctx.shadowBlur=0;}
+ // Dark breaks in the board mark lethal gaps between solid chip blocks.
+ for(const g of gaps){ctx.fillStyle='#030611';ctx.fillRect(g.x,FLOOR,g.w,H-FLOOR);ctx.strokeStyle='#ff517b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(g.x,FLOOR+8);ctx.lineTo(g.x,H);ctx.moveTo(g.x+g.w,FLOOR+8);ctx.lineTo(g.x+g.w,H);ctx.stroke();}
+ for(const p of platforms){
+  const top=FLOOR-p.h,thickness=p.thickness??p.h;
+  ctx.shadowColor='#6fbaff';ctx.shadowBlur=12;ctx.fillStyle='#183e59';ctx.fillRect(p.x,top,p.w,thickness);ctx.strokeStyle='#6fbaff';ctx.lineWidth=2;ctx.strokeRect(p.x+1,top+1,p.w-2,thickness-2);ctx.shadowBlur=0;
+  ctx.fillStyle='#a2e5ff';ctx.fillRect(p.x,top,p.w,3);ctx.strokeStyle='#396e94';for(let xx=p.x+12;xx<p.x+p.w-8;xx+=28)ctx.strokeRect(xx,top+7,16,Math.min(30,thickness-10));
+  if(p.thickness){ctx.strokeStyle='#6fbaff55';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.x+p.w/2,top+thickness+5);ctx.lineTo(p.x+p.w/2,top+thickness+25);ctx.stroke();ctx.beginPath();ctx.arc(p.x+p.w/2,top+thickness+30,3,0,Math.PI*2);ctx.stroke();}
+ }
+ // Three-legged transistor packages fit inside the original obstacle footprints.
+ for(const o of obstacles){
+  const top=(o.base??FLOOR)-o.h,bodyHeight=o.h*.64;
+  ctx.save();ctx.translate(o.x,top);
+  // Metal emitter, base, and collector leads reach down to the board.
+  ctx.strokeStyle='#c4b4c7';ctx.lineWidth=3;ctx.lineCap='round';
+  for(const pin of [.22,.5,.78]){ctx.beginPath();ctx.moveTo(o.w*pin,bodyHeight-2);ctx.lineTo(o.w*pin,o.h-2);ctx.stroke();}
+  ctx.shadowColor='#ff517b';ctx.shadowBlur=12;ctx.fillStyle='#302339';ctx.strokeStyle='#ff7595';ctx.lineWidth=2;
+  // The sloped shoulders give the plastic casing a recognizable transistor shape.
+  ctx.beginPath();ctx.moveTo(2,bodyHeight);ctx.lineTo(2,9);ctx.lineTo(9,1);ctx.lineTo(o.w-9,1);ctx.lineTo(o.w-2,9);ctx.lineTo(o.w-2,bodyHeight);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.strokeStyle='#91627f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(8,10);ctx.lineTo(o.w-8,10);ctx.stroke();
+  ctx.textAlign='center';ctx.font='bold 9px monospace';ctx.fillStyle='#ffd3df';ctx.fillText('NPN',o.w/2,bodyHeight-5);
+  ctx.restore();
+ }
+ // Collectible hearts scroll with the course, separate from the HUD hearts.
+ for(const heart of pickups){
+  ctx.save();ctx.translate(heart.x,heart.y);ctx.shadowColor='#ff6a91';ctx.shadowBlur=20;
+  ctx.fillStyle='#ff6a91';ctx.strokeStyle='#ffe3ec';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,14);ctx.bezierCurveTo(-30,-3,-15,-24,0,-10);ctx.bezierCurveTo(15,-24,30,-3,0,14);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('+1',0,-27);ctx.restore();
+ }
  // A circuit-board bug, drawn inside the original player footprint.
  ctx.save();ctx.translate(X+SIZE/2,y+SIZE/2);ctx.rotate(angle);ctx.globalAlpha=invincible>0?.55+.45*Math.sin(invincible*30)**2:1;
  ctx.strokeStyle='#64ffe2';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
