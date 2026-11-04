@@ -1,18 +1,20 @@
-﻿{
-    "name":  "cpugame",
-    "version":  "1.0.0",
-    "description":  "",
-    "main":  "index.js",
-    "scripts":  {
-                    "test":  "node --test game.test.cjs"
-                },
-    "keywords":  [
-
-                 ],
-    "author":  "",
-    "license":  "ISC",
-    "type":  "commonjs",
-    "dependencies":  {
-                         "phaser":  "^4.2.1"
-                     }
+{
+    "name": "cpugame",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "node --test game.test.cjs",
+        "test:browser": "playwright test"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {
+        "phaser": "4.2.1"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.64.1"
+    }
 }

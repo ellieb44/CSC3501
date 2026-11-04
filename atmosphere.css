@@ -16,3 +16,75 @@
 .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}body>main>header{display:none}body:has(#home:not([hidden])){padding:0;overflow:hidden;background:#100e1b}#home{position:fixed;inset:0;z-index:5;margin:0;padding:0;border:0;border-radius:0;background:#100e1b;box-shadow:none;max-width:none;overflow:hidden;text-align:left}#home #opening-art{position:absolute;inset:0;width:100%;height:100%;max-width:none;aspect-ratio:auto;object-fit:cover;object-position:center;border:0;margin:0;box-shadow:none;image-rendering:pixelated}.home-shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,#0a07165e,transparent 65%),linear-gradient(0deg,#0a0716c9,transparent 40%)}#home #home-title{position:absolute;top:9%;left:7%;width:clamp(230px,34vw,550px);margin:0;line-height:1}#home-title img{display:block;width:100%;height:auto;image-rendering:pixelated}.title-menu{position:absolute;left:7%;bottom:12%;max-width:min(450px,85vw)}#home #start{display:block;margin:0;padding:10px 0;color:#f4e5ca;background:transparent;border:0;box-shadow:none;text-align:left;font:bold clamp(18px,2vw,26px) monospace;letter-spacing:1px;text-shadow:3px 3px #170e21}#home #start:hover{color:#b4f1cd;transform:translateX(5px)}.home-help{margin:16px 0 0;color:#beadb9;font:12px monospace}.home-help summary{list-style:none;padding:5px 0;cursor:pointer}.home-help summary:before{content:'+ ';color:#a999ad}.home-help[open] summary:before{content:'- '}.home-help p{margin:10px 0 0;padding:12px;background:#100d1be8;border:1px solid #534253;color:#dbcfca;font-size:12px}body:has(#home:not([hidden])) .soundbar{position:fixed;right:24px;bottom:24px;z-index:6;margin:0}.soundbar button{font-size:10px;letter-spacing:0;background:#100e1b99;border:1px solid #6c5c6e;color:#c7c0b6;box-shadow:none}.soundbar{justify-content:flex-end;margin-top:12px}#world-map{position:relative;margin:0;padding:20px 0 0;border:0;background:transparent;box-shadow:none}#world-map #map-title{margin:0 0 16px;text-align:left}#map-title img{display:block;width:clamp(150px,22vw,245px);height:auto;image-rendering:pixelated}#map-status{position:absolute;right:0;top:14px;margin:0;max-width:55%;font:11px monospace;text-align:right;color:#b5c1b6;min-height:0}.pixel-map{border:2px solid #3b5250;box-shadow:none}.map-walk-controls{margin-top:16px;gap:10px}.map-walk-controls button{font:12px monospace;padding:10px 18px;background:#15262a;color:#dfdeca;border:1px solid #6b7d70;box-shadow:none}.map-legend{font:10px monospace;margin:16px 0 6px;color:#84998f;letter-spacing:0}.map-destinations{margin:10px auto 0;font-size:10px}.map-destinations p{font-size:11px}.panel{box-shadow:none}.panel h1{letter-spacing:0;text-shadow:2px 2px #46374f}.panel #eyebrow{display:none}.panel button{box-shadow:none}#stage{border-color:#3c3749;box-shadow:none}@media(pointer:fine){#map-prev,#map-next{display:none}}@media(max-width:600px){#home #opening-art{object-position:61% center}#home #home-title{top:8%;left:8%;width:70%;max-width:340px}.title-menu{left:8%;bottom:13%}#world-map{padding-top:12px}#map-title img{width:145px}#map-status{top:10px;font-size:9px;max-width:48%}body:has(#home:not([hidden])) .soundbar{bottom:16px;right:16px}.home-help p{font-size:11px}#home #start{font-size:22px}}
 
 #scene-curtain{position:fixed;inset:0;z-index:30;background:#050409;pointer-events:auto;will-change:opacity}#scene-curtain[hidden]{display:none}#home #start:active{transform:translateX(5px)}
+
+/* Keep quiz choices legible before and after an answer is submitted. */
+#answers button{color:#f6efde;background:#211a2e;border:2px solid #9585a3;font-size:14px;line-height:1.5}
+#answers button:hover:not(:disabled){background:#342941;border-color:#c8b5df}
+#answers button:focus-visible{outline:3px solid #fff1b8;outline-offset:3px}
+#answers button:disabled{color:#f6efde;opacity:1;-webkit-text-fill-color:currentColor}
+#answers button.correct{color:#edfff5;background:#174a43;border-color:#a8ffd5}
+#answers button.wrong{color:#fff0f3;background:#522638;border-color:#ff9db5}
+#description{color:#e2d9e8}
+#feedback{color:#fff1bd;font-size:15px;line-height:1.65}
+@media(max-width:600px){#answers{grid-template-columns:1fr}#answers button{font-size:13px;padding:11px 12px}.panel #feedback{font-size:14px}}
+
+/* Map labels render at screen resolution for sharp type. */
+.pixel-map #map-canvas{image-rendering:auto}
+
+/* Level-specific accents follow the palette used by the playfield. */
+#stage #hud{color:var(--level-color,#a8ffd5)}
+#stage #action{background:var(--level-color,#a8ffd5);border-color:var(--level-color,#a8ffd5);color:#10131c}
+#stage .panel{border-color:var(--level-color,#f6efde)}
+
+/* Phaser keeps a 1280 x 720 render surface; the original layout controls its display size. */
+#stage>#game{width:100%!important;height:100%!important}
+
+/* Boss questions occupy their own dock, never the arena. */
+#stage.boss-mode{display:grid;grid-template-columns:minmax(0,1fr) minmax(310px,38%);align-items:start;aspect-ratio:auto;overflow:visible;background:#0c0b14}
+#stage.boss-mode>#game{height:auto!important;aspect-ratio:16/9;position:sticky;top:12px;z-index:1}
+#stage.boss-mode #hud{inset:12px auto auto 12px;width:calc(62% - 24px);font-size:10px}
+#stage.boss-mode #distance{display:none}
+#stage.boss-mode .overlay{position:relative;inset:auto;display:block;padding:12px;background:#0c0b14;min-width:0}
+#stage.boss-mode .panel{width:100%;max-height:none;overflow:visible;padding:10px;border:0}
+#stage.boss-mode .panel h1{font-size:clamp(18px,2vw,24px);margin:12px 0}
+#stage.boss-mode #description{min-height:0;margin:8px 0}
+#stage.boss-mode #answers{grid-template-columns:1fr;margin:12px 0;gap:8px}
+#stage.boss-mode #answers button{padding:10px 14px}
+#stage.boss-mode #feedback{margin:8px 0}
+#boss-status{display:flex;align-items:center;gap:12px;color:#fff1bd;font:bold 13px monospace}
+#boss-health{flex:1;min-width:60px;height:18px;accent-color:#ff7595}
+@media(max-width:700px){
+ #stage.boss-mode{grid-template-columns:1fr}
+ #stage.boss-mode>#game{top:0;background:#0c0b14;z-index:4}
+ #stage.boss-mode #hud{width:calc(100% - 24px)}
+ #stage.boss-mode .overlay{padding:8px}
+ #stage.boss-mode .panel{padding:8px}
+ #stage.boss-mode #answers button{font-size:13px;padding:10px}
+}
+
+.map-tabs{display:flex;align-items:center;gap:10px;margin:0 0 16px;border-bottom:1px solid #3b5250;padding-bottom:12px}
+.map-tabs button{background:#15262a;color:#e4e8dd;border:1px solid #6b7d70;padding:10px 18px;box-shadow:none}
+.map-tabs button[aria-selected="true"]{background:#a8ffd5;color:#10131c;border-color:#a8ffd5}
+.coin-balance{color:#ffdf83;font:bold 12px monospace;white-space:nowrap}
+.map-tabs .coin-balance{margin-left:auto}
+#map-status{position:static;text-align:left;max-width:none;margin:0 0 12px}
+#review-panel{text-align:left;max-width:900px;margin:0 auto;padding:6px 0 18px}
+.review-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.review-heading h2{font-size:22px}
+#review-panel p{line-height:1.65;color:#d7d9d6;font-size:13px}
+.review-progress{display:flex;align-items:center;gap:12px;color:#ffdf83;font-size:12px;margin:20px 0}
+.review-progress progress{flex:1;min-width:50px;accent-color:#ffdf83}
+#review-panel label{display:block;font-size:12px;color:#c6d8cd}
+#review-panel select{display:block;width:100%;max-width:100%;padding:10px;margin:8px 0 14px;background:#15262a;color:#f6efde;border:1px solid #6b7d70;font:12px monospace}
+#review-panel .review-progress label{display:inline;white-space:nowrap}
+.review-card{border:1px solid #6b7d70;background:#0c0b14;padding:24px}
+.review-card h3{font-size:20px;line-height:1.45;margin-top:0}
+#review-answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#review-answers button{background:#211a2e;color:#f6efde;border:2px solid #9585a3;box-shadow:none;text-align:left;line-height:1.5;padding:12px}
+#review-answers button:disabled{opacity:1;-webkit-text-fill-color:currentColor}
+#review-answers button.correct{background:#174a43;border-color:#a8ffd5;color:#edfff5}
+#review-answers button.wrong{background:#522638;border-color:#ff9db5;color:#fff0f3}
+#review-panel #review-feedback{color:#fff1bd}
+#stage #skip-question{background:#322c1d;color:#ffdf83;border:1px solid #b49b58;padding:10px 14px}
+#stage #skip-question:disabled{opacity:.6;cursor:not-allowed}
+@media(max-width:600px){#review-answers{grid-template-columns:1fr}.review-card{padding:16px}.review-heading h2{font-size:18px}.review-progress{flex-wrap:wrap}#level-toolbar{flex-wrap:wrap}}
