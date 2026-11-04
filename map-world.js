@@ -13,7 +13,13 @@ function show(config){completed=config.unlocked;limit=Math.min(config.unlocked,5
 function update(dt){clock+=dt;if(arrival>0){arrival=Math.max(0,arrival-dt);prompt();return;}let delta=direction*52*dt;if(target!==null){const diff=target-distance;delta=Math.sign(diff)*Math.min(Math.abs(diff),52*dt);if(Math.abs(diff)<.01)target=null;}const next=Math.max(0,Math.min(stops[limit],distance+delta));if(next!==distance){distance=next;prompt();}}
 function move(value){if(value&&value!==direction)window.cpuAudio?.effect('navigate');direction=value;target=null;}
 function key(e,down){const forward=['ArrowRight','ArrowUp','KeyD','KeyW'],back=['ArrowLeft','ArrowDown','KeyA','KeyS'];if(forward.includes(e.code)||back.includes(e.code)){e.preventDefault();if(down){move(forward.includes(e.code)?1:-1);}else direction=0;return true;}if(down&&['Enter','Space'].includes(e.code)){e.preventDefault();if(!e.repeat)activate();return true;}return false;}
-function draw(){ctx.imageSmoothingEnabled=false;const r=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h);};r(0,0,400,220,'#0c2022');for(let y=0;y<220;y+=8)for(let x=0;x<400;x+=8){r(x,y,7,7,(x*7+y*13)%24===0?'#173339':'#10272a');}for(let row=0;row<9;row++){const y=12+row*22;r(0,y,400,1,'#25473f');for(let x=20;x<400;x+=66){r(x,y,2,11,'#25473f');r(x-2,y-2,5,5,'#667552');r(x-1,y-1,3,3,'#162e2b');}}
+function draw(){
+ // Render text at the displayed resolution rather than enlarging 6px glyphs.
+ const scale=(canvas.clientWidth||400)/400*(window.devicePixelRatio||1);
+ const width=Math.round(400*scale),height=Math.round(220*scale);
+ if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+ ctx.setTransform(width/400,0,0,height/220,0,0);
+ ctx.imageSmoothingEnabled=false;const r=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h);};r(0,0,400,220,'#0c2022');for(let y=0;y<220;y+=8)for(let x=0;x<400;x+=8){r(x,y,7,7,(x*7+y*13)%24===0?'#173339':'#10272a');}for(let row=0;row<9;row++){const y=12+row*22;r(0,y,400,1,'#25473f');for(let x=20;x<400;x+=66){r(x,y,2,11,'#25473f');r(x-2,y-2,5,5,'#667552');r(x-1,y-1,3,3,'#162e2b');}}
 r(80,28,302,155,'#07171e');r(83,31,296,149,'#38494a');r(86,34,290,143,'#152d35');
 for(let x=90;x<380;x+=8){r(x,26,3,6,'#8b876a');r(x,180,3,6,'#8b876a');}for(let y=38;y<177;y+=8){r(77,y,6,3,'#8b876a');r(382,y,6,3,'#8b876a');}
 for(let x=22;x<80;x+=26){r(x,44,15,22,'#2c424b');r(x,40,15,8,'#71817f');r(x+4,43,7,2,'#bcc0a1');}r(116,195,172,14,'#455637');for(let x=121;x<280;x+=27){r(x,198,19,7,'#142027');r(x,209,18,3,'#b8a47d');}
@@ -25,7 +31,7 @@ if(i===2){for(let b=-8;b<10;b+=6){r(x-9,y+b,18,4,'#7c8d9c');for(let q=-6;q<8;q+=
 if(i===3){for(let b=0;b<15;b++)r(x-9+Math.floor(b/3),y-9+b,18-Math.floor(b/3)*2,1,color);r(x-1,y+6,2,6,color);}
 if(i===4){for(let yy=-7;yy<9;yy+=9)for(let xx=-8;xx<9;xx+=10)r(x+xx,y+yy,7,6,'#a294b5');}
 if(i===5){r(x-8,y-8,16,16,'#798987');r(x-6,y-6,12,12,'#182b34');r(x,y-4,2,7,color);r(x,y+1,5,2,color);}
-ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(cpuStages[i].name,x,y+29);if(i>limit){r(x-3,y-4,6,8,'#38434d');r(x-2,y-6,4,2,'#bac0af');}}
+ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillStyle=i>limit?'#c1cbd0':color;ctx.fillText(cpuStages[i].name,x,y+29);if(i>limit){r(x-3,y-4,6,8,'#38434d');r(x-2,y-6,4,2,'#bac0af');}}
 let [px,py]=position(distance);if(arrival>0){px-=arrival*29;py+=arrival*10;}const walking=arrival>0||direction!==0||target!==null;const stride=walking?Math.floor(clock*9)%2:0;const boy=['...hhhh...','..hhhhhh..','..hssss...','..hsees...','...ssss...','..cccccc..','.cccccccc.','..cccccc..','...cccc...','...l..l...','..ll..ll..'];r(px-6,py+2,13,3,'#08151b');boy.forEach((row,y)=>[...row].forEach((c,x)=>{const color={h:'#69424b',s:'#dfac8f',e:'#211b2c',c:'#a8bbdb',l:'#666886'}[c];if(color)r(px-5+x,py-11+y+(y>8?((x<5?stride:-stride)):0),1,1,color);}));ctx.fillStyle='#b3cab4';ctx.textAlign='left';ctx.font='6px monospace';ctx.fillText('CPU / INTERIOR',8,13);ctx.fillText('I/O > HOME',325,209);
 }
 enter.addEventListener('click',activate);for(const [id,value] of [['map-prev',-1],['map-next',1]]){const b=document.getElementById(id);b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);move(value);});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>move(0));b.addEventListener('keydown',e=>{if(['Enter','Space'].includes(e.code)){e.preventDefault();move(value);}});b.addEventListener('keyup',()=>move(0));}
