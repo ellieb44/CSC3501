@@ -98,3 +98,8 @@
 .shop-card h3{font-size:15px}.shop-card button{width:100%;font-size:12px;padding:10px}
 .shop-card button:disabled{opacity:.55;cursor:default}
 #shop-feedback{min-height:1.6em;color:#ffdf83}
+
+.free-play-record{display:flex;flex-direction:column;align-items:center;gap:12px;margin:28px 0;padding:30px 20px;border:2px solid #ffdf83;background:linear-gradient(135deg,#302719,#111b24);box-shadow:0 0 24px #ffdf831a,inset 0 0 32px #ffdf8308;text-align:center}
+.record-label{font:bold 15px monospace;letter-spacing:4px;color:#ffdf83}
+#free-play-best{display:block;font:bold clamp(44px,8vw,76px)/1.15 monospace;color:#fff1bd;text-shadow:0 0 22px #ffdf8344;overflow-wrap:anywhere}
+.record-caption{font:11px monospace;letter-spacing:2px;color:#c6c9c8}

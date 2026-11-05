@@ -70,7 +70,7 @@ function selectMapTab(selection){
  }
  if(selected==='review-tab')window.cpuReview.open();else window.cpuReview.close();
  if(selected==='shop-tab')renderShop();
- document.getElementById('free-play-best').textContent=`High score: ${freeBest} m`;
+ document.getElementById('free-play-best').textContent=`${freeBest} m`;
 }
 const tabPanels={'map-tab':'map-panel','review-tab':'review-panel','free-play-tab':'free-play-panel','shop-tab':'shop-panel'};
 for(const id of mapTabs){
@@ -89,7 +89,7 @@ let state='ready',distance=0,elapsed=0,speed=360,best=0,y=FLOOR-SIZE,vy=0,angle=
 let freePlay=false,freeBest=0;
 try{const stored=Number(localStorage.getItem('cpuEscapeFreeBest'));if(Number.isFinite(stored)&&stored>0)freeBest=Math.floor(stored);}catch{}
 // Temporary testing switch: set false to restore normal level progression.
-const UNLOCK_ALL_LEVELS=false;
+const UNLOCK_ALL_LEVELS=true;
 let unlocked=UNLOCK_ALL_LEVELS?cpuStages.length-1:0,storyTime=0,storyPage=0,introEntry=0;
 const questionBags=new Map();
 function nextQuestion(){
@@ -104,7 +104,7 @@ function nextQuestion(){
 }
 function applyLevelColor(){ui.stage.style.setProperty?.('--level-color',stageData().color);}
 // Each successive level adds thirty seconds of active running.
-const stageDuration=index=>60+index*30;
+const stageDuration=index=>30+index*30;
 // Distinct tiers: faster runs, shorter rests, and more demanding terrain.
 const difficulty=[
  {speed:.92,rest:1.55,gap:.16,mounted:.15,popup:.15,sections:2,sky:1},
@@ -148,6 +148,7 @@ function followJump(dt){
 
 const MAX_REVIVES=3;
 let revives=MAX_REVIVES;
+const BOSS_SHOT_TIME=.28,BOSS_DEATH_DURATION=.9;
 const boss={active:false,hp:0,maxHp:0,questions:[],hitTime:0,deathTime:0};
 const bossStatus=document.getElementById('boss-status'),bossHealth=document.getElementById('boss-health'),bossHp=document.getElementById('boss-hp');
 function resetBoss(){boss.active=false;boss.hitTime=0;boss.deathTime=0;bossStatus.hidden=true;ui.stage.classList.remove('boss-mode');}
@@ -165,7 +166,7 @@ function askBossQuestion(){
  if(!boss.active||boss.hp<=0)return;
  if(!boss.questions.length)boss.questions=cpuBossQuestions.filter(q=>q.stage===stageIndex).slice().reverse();
  const q=boss.questions.pop();state='boss-question';
- modal('BOSS / '+stageData().name,q.question,`Boss challenge ${stageIndex+1} / 6. Answer correctly to damage the bug.`,'',null);
+ modal('BOSS / '+stageData().name,q.question,'','',null);
  q.options.forEach((option,i)=>{
   const button=document.createElement('button');button.textContent=String.fromCharCode(65+i)+'. '+option;
   button.addEventListener('click',()=>resolveBossQuestion(q,i,button));ui.answers.append(button);
@@ -186,7 +187,8 @@ function resolveBossQuestion(q,index,button,skipped=false){
  window.cpuDialogue.write(ui.feedback,message+q.explanation);
  ui.action.hidden=false;ui.action.textContent=lost?'Retry this level':boss.hp===0?'Finish level':'Next attack';
  action=lost?()=>enterLevel(stageIndex):boss.hp===0?completeGate:askBossQuestion;
- updateBossHealth();hud();ui.action.focus();window.cpuAudio?.effect(boss.hp===0?'splat':correct?'correct':'wrong');
+ if(boss.hp===0){boss.deathTime=0;boss.hitTime=0;ui.overlay.hidden=true;}
+ updateBossHealth();hud();ui.action.focus();window.cpuAudio?.effect(correct?'correct':'wrong');
 }
 
 let pickups=[],heartNumber=1;
@@ -251,7 +253,7 @@ document.getElementById('leave-level').addEventListener('click',()=>{if(state!==
 leaveDialog.addEventListener('keydown',e=>{if(e.code==='Escape'){e.preventDefault();cancelMap();}if(e.code==='Tab'){e.preventDefault();(document.activeElement===stayButton?document.getElementById('leave-level'):stayButton).focus();}});
 function pause(){if(state==='map'){window.cpuMap.stop();return;}if(state!=='running')return;state='paused';modal('CIRCUIT / PAUSED','Catch your breath.','Your distance and speed are preserved.','Resume →',resume);}
 function clearRunway(){resetBugTrail();obstacles=[];platforms=[];gaps=[];grounded=true;nextSpawn=distance+speed*2;y=FLOOR-SIZE;vy=0;invincible=1.5;resume();}
-function completeGate(){resetBoss();window.cpuAudio?.effect('clear');save();unlocked=Math.max(unlocked,stageIndex+1);gate=false;state='cleared';if(unlocked>=cpuStages.length&&stageIndex===cpuStages.length-1){state='won';modal('COMPUTER / ESCAPE SUCCESSFUL','The boy is finally home.',`All ${cpuStages.length} routes cleared. You outran the bug and learned how the computer works. First-answer accuracy this run: ${correctCount}/${attempts}.`,'Return to map',showMap);return;}modal('LEVEL / CLEARED',stageData().name+' complete!',cpuStages[stageIndex+1].name+' is now unlocked. The bug is still out there. Choose your next stop on the map.','Return to map',showMap);}
+function completeGate(){if(boss.active&&boss.hp===0&&boss.deathTime<BOSS_DEATH_DURATION)return;resetBoss();window.cpuAudio?.effect('clear');save();unlocked=Math.max(unlocked,stageIndex+1);gate=false;state='cleared';if(unlocked>=cpuStages.length&&stageIndex===cpuStages.length-1){state='won';modal('COMPUTER / ESCAPE SUCCESSFUL','The boy is finally home.',`All ${cpuStages.length} routes cleared. You outran the bug and learned how the computer works. First-answer accuracy this run: ${correctCount}/${attempts}.`,'Return to map',showMap);return;}modal('LEVEL / CLEARED',stageData().name+' complete!',cpuStages[stageIndex+1].name+' is now unlocked. The bug is still out there. Choose your next stop on the map.','Return to map',showMap);}
 function askQuestion(isRecovery=false){
  state='quiz';recovery=isRecovery;const q=cpuQuestions[nextQuestion()];
  modal((gate?'SECTOR GATE':'BUG ENCOUNTER')+(isRecovery?' / RECOVERY':' / CPU CHECK'),q.question,isRecovery?'One more chance. Use the explanation you just learned.':gate?'Prove what you learned to open the next sector.':'The bug caught you. Answer to escape. A wrong answer gives you an explanation and one recovery question.','',null);
@@ -272,6 +274,13 @@ window.addEventListener('blur',pause);document.addEventListener('visibilitychang
 function spawn(){
  spawnCount++;
  const tier=difficulty[stageIndex];
+ // Separate gates require a fresh jump each time, with a brief landing window.
+ if(spawnCount%9===0){
+  const count=3+Math.floor(stageIndex/2),spacing=Math.round(speed*.86);
+  for(let gate=0;gate<count;gate++)obstacles.push({x:W+60+gate*spacing,w:54,h:48,logicGate:['AND','OR','NOT'][gate%3]});
+  nextSpawn=distance+(count-1)*spacing+54+speed*(tier.rest+.8);
+  return;
+ }
  if(spawnCount%11===0){
   const width=Math.round(speed*1.1);
   obstacles.push({x:W+60,w:width,h:110,base:FLOOR-64,tunnel:true});
@@ -279,27 +288,25 @@ function spawn(){
   return;
  }
  if(spawnCount%5===0){
-  const begin=W+60,ramp=Math.round(speed*.6),deck=Math.round(speed*(.85-stageIndex*.035));
-  const breakWidth=Math.round(speed*(.23+Math.min(stageIndex,3)*.02));
-  const sections=tier.sections;
+  const begin=W+60,ramp=Math.round(speed*.65),deck=Math.round(speed*.65);
+  const breakWidth=Math.round(speed*.24);
   let cursor=begin;
-  const addRamp=(x,descending)=>{
-   const count=40,width=ramp/count;
-   for(let i=0;i<count;i++){
-    const t=(i+.5)/count,smooth=t*t*(3-2*t);
-    platforms.push({x:x+i*width,w:width+.5,h:48*(descending?1-smooth:smooth),thickness:18,wire:true,ramp:true});
+  const addCurve=descending=>{
+   const strips=48,width=ramp/strips;
+   for(let i=0;i<strips;i++){
+    const t=(i+.5)/strips,smooth=t*t*(3-2*t);
+    platforms.push({x:cursor+i*width,w:width+.5,h:80*(descending?1-smooth:smooth),thickness:18,wire:true,ramp:true});
    }
+   cursor+=ramp;
   };
-  addRamp(cursor,false);cursor+=ramp;
-  const gapStart=cursor;
-  for(let i=0;i<sections;i++){
-   platforms.push({x:cursor,w:deck,h:48,thickness:18,wire:true,
-    copperLeft:i>0,copperRight:i<sections-1});
-   cursor+=deck+(i<sections-1?breakWidth:0);
-  }
-  gaps.push({x:gapStart,w:cursor-gapStart});
-  addRamp(cursor,true);cursor+=ramp;
-  nextSpawn=distance+cursor-begin+speed*(tier.rest+.45);
+  addCurve(false);
+  platforms.push({x:cursor,w:deck,h:80,thickness:18,wire:true,copperLeft:false,copperRight:true});
+  cursor+=deck+breakWidth;
+  platforms.push({x:cursor,w:deck,h:80,thickness:18,wire:true,copperLeft:true,copperRight:false});
+  cursor+=deck;addCurve(true);
+  // Ground overlaps the curved ends; only the middle spans the pit.
+  gaps.push({x:begin+ramp*.55,w:cursor-begin-ramp*1.1});
+  nextSpawn=distance+cursor-begin+speed*(tier.rest+.8);
   return;
  }
  if(spawnCount%4===0){
@@ -343,7 +350,11 @@ function spawn(){
 function fall(){crash();}
 const obstacleHeight=o=>o.arc?28+40*(.5+.5*Math.sin((o.age??0)*5)):o.h*(o.popup?(o.rise??0):1);
 function collision(o){if(obstacleHeight(o)<=0)return false;const base=o.base??FLOOR,left=X+6,right=X+SIZE-6,top=y+5,bottom=y+SIZE-3;if(right<=o.x||left>=o.x+o.w||bottom<=base-obstacleHeight(o)||top>=base)return false;return true;}
-function step(dt){if(state!=='confirm-leave'&&introEntry<=0)window.cpuDialogue.update(dt);if(state==='map'){window.cpuMap.update(dt);return;}if(state==='practice')return;if(state==='map-transition'){transitionTime+=dt;ui.overlay.style.opacity=String(Math.max(0,1-transitionTime/1.7));if(transitionTime>=1.8)showMap(true);return;}if(state==='intro'){storyStep(dt);return;}if(boss.active){if(state!=='confirm-leave'){boss.hitTime=Math.max(0,boss.hitTime-dt);if(boss.hp===0)boss.deathTime+=dt;}return;}if(state!=='running')return;elapsed+=dt;speed=(360+260*(1-Math.exp(-elapsed/100)))*difficulty[stageIndex].speed;distance+=speed*dt;invincible=Math.max(0,invincible-dt);buffer=Math.max(0,buffer-dt);
+function step(dt){if(state!=='confirm-leave'&&introEntry<=0)window.cpuDialogue.update(dt);if(state==='map'){window.cpuMap.update(dt);return;}if(state==='practice')return;if(state==='map-transition'){transitionTime+=dt;ui.overlay.style.opacity=String(Math.max(0,1-transitionTime/1.7));if(transitionTime>=1.8)showMap(true);return;}if(state==='intro'){storyStep(dt);return;}if(boss.active){if(state!=='confirm-leave'){boss.hitTime=Math.max(0,boss.hitTime-dt);if(boss.hp===0){
+ const before=boss.deathTime;boss.deathTime+=dt;
+ if(before<BOSS_SHOT_TIME&&boss.deathTime>=BOSS_SHOT_TIME)window.cpuAudio?.effect('splat');
+ if(before<BOSS_DEATH_DURATION&&boss.deathTime>=BOSS_DEATH_DURATION){ui.overlay.hidden=false;ui.action.focus();}
+ }}return;}if(state!=='running')return;elapsed+=dt;speed=(360+260*(1-Math.exp(-elapsed/100)))*difficulty[stageIndex].speed;distance+=speed*dt;invincible=Math.max(0,invincible-dt);buffer=Math.max(0,buffer-dt);
  if(grounded&&(held||buffer>0)){vy=-830;buffer=0;grounded=false;}
  const wasGrounded=grounded;
  const previousBottom=y+SIZE;vy+=2400*dt;y+=vy*dt;
@@ -383,49 +394,145 @@ function step(dt){if(state!=='confirm-leave'&&introEntry<=0)window.cpuDialogue.u
  if(grounded)angle=Math.round(angle/(Math.PI/2))*Math.PI/2;else angle+=Math.PI*2*dt/.7;
  followJump(dt);if(freePlay)saveFreeBest();const hit=obstacles.find(o=>(o.tunnel||!invincible)&&collision(o));if(hit)crash(!!hit.tunnel);hud();
 }
+// Component-specific scenery stays behind the hazards and freezes when paused.
+function drawPitElectricity(g){
+ const left=Math.max(0,g.x),right=Math.min(W,g.x+g.w);
+ if(right<=left)return;
+ const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+ const phase=reduced?0:Math.floor(elapsed*12);
+ ctx.save();ctx.beginPath();ctx.rect(g.x,FLOOR,g.w,H-FLOOR);ctx.clip();
+ const glow=ctx.createLinearGradient(0,H-76,0,H);
+ glow.addColorStop(0,'#37bfff00');glow.addColorStop(1,'#37bfff55');
+ ctx.fillStyle=glow;ctx.fillRect(left,H-76,right-left,76);
+ // Layered jagged arcs stay low in the pit and freeze with the run.
+ ctx.shadowColor='#53d8ff';ctx.shadowBlur=16;ctx.lineJoin='miter';
+ for(let lane=0;lane<3;lane++){
+  ctx.beginPath();
+  for(let x=left-12,point=0;x<=right+16;x+=12,point++){
+   const jag=Math.sin((Math.floor((x-g.x)/12)+phase*3+lane*17)*12.9898)*Math.cos(point+phase+lane);
+   const yy=H-12-lane*14+jag*(lane===2?14:8);
+   if(point===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);
+  }
+  ctx.strokeStyle=lane===0?'#bff8ff':'#42bfff';ctx.lineWidth=lane===0?3:2;ctx.stroke();
+  ctx.shadowBlur=0;ctx.strokeStyle='#e8fdff';ctx.lineWidth=1;ctx.stroke();ctx.shadowBlur=16;
+ }
+ ctx.restore();
+}
+function drawLevelBackdrop(){
+ const color=stageData().color;
+ const panel=(x,y,w,h,label)=>{
+  ctx.fillStyle=blendColor(stageData().background,'#070e19',.6);ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle=color+'66';ctx.lineWidth=2;ctx.strokeRect(x,y,w,h);
+  if(label){ctx.fillStyle=color+'bb';ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillText(label,x+w/2,y+24);}
+ };
+ const line=(points)=>{ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();};
+ const label=(text,x,y,size=16)=>{ctx.font=`bold ${size}px monospace`;ctx.textAlign='center';ctx.fillStyle=color+'aa';ctx.fillText(text,x,y);};
+ for(let tile=-1;tile<3;tile++){
+  ctx.save();ctx.translate(tile*640-distance*.16%640,0);
+  ctx.strokeStyle=color+'44';ctx.lineWidth=2;
+  if(freePlay){
+   // An unlabeled motherboard mixes chips, memory, capacitors, and data traces.
+   for(let lane=0;lane<7;lane++){
+    const yy=156+lane*45;
+    ctx.strokeStyle=(lane%2?'#77b9ff':'#71d9be')+'44';
+    line([[0,yy],[70,yy],[100,yy-24],[480,yy-24],[514,yy+10],[640,yy+10]]);
+    ctx.beginPath();ctx.arc(100,yy-24,3,0,Math.PI*2);ctx.stroke();
+    const signal=(distance*.24+lane*83)%640;
+    ctx.fillStyle='#a8ffd588';ctx.fillRect(signal,yy-26,4,4);
+   }
+   panel(170,214,166,148,'');panel(190,234,126,108,'');
+   for(let pin=0;pin<9;pin++){
+    ctx.fillStyle='#7192a3';ctx.fillRect(180+pin*17,204,4,10);ctx.fillRect(180+pin*17,362,4,10);
+    ctx.fillRect(160,224+pin*15,10,4);ctx.fillRect(336,224+pin*15,10,4);
+   }
+   for(let bank=0;bank<2;bank++){
+    panel(400,175+bank*88,174,58,'');
+    for(let chip=0;chip<4;chip++){
+     ctx.fillStyle='#0b1b2b';ctx.fillRect(410+chip*40,186+bank*88,30,32);
+     ctx.fillStyle='#ad9a69';ctx.fillRect(410+chip*40,234+bank*88,29,4);
+    }
+   }
+   for(let cap=0;cap<4;cap++){
+    const x=420+cap*44;ctx.fillStyle='#183b48';ctx.fillRect(x-10,405,20,30);
+    ctx.fillStyle='#688d9d';ctx.beginPath();ctx.ellipse(x,405,10,5,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#c4ced3';line([[x-5,405],[x+5,405]]);
+   }
+   for(const yy of [146,457]){ctx.strokeStyle='#73909a66';ctx.beginPath();ctx.arc(36,yy,7,0,Math.PI*2);ctx.stroke();}
+  }else if(stageIndex===0){
+   // Processor die, socket pins, and a visible instruction pipeline.
+   panel(175,180,280,220,'CENTRAL PROCESSOR');
+   for(let pin=0;pin<14;pin++){
+    ctx.fillStyle=color+'66';ctx.fillRect(186+pin*19,168,5,12);ctx.fillRect(186+pin*19,400,5,12);
+    ctx.fillRect(163,194+pin*14,12,5);ctx.fillRect(455,194+pin*14,12,5);
+   }
+   for(let unit=0;unit<3;unit++)panel(194+unit*83,238,70,110,['FETCH','DECODE','EXECUTE'][unit]);
+   for(let lane=0;lane<5;lane++){
+    ctx.strokeStyle=color+'44';line([[0,214+lane*36],[90,214+lane*36],[130,234+lane*36],[163,234+lane*36]]);
+    line([[467,214+lane*36],[510,214+lane*36],[550,194+lane*36],[640,194+lane*36]]);
+   }
+   label('INSTRUCTION BUS',315,454);
+  }else if(stageIndex===1){
+   // A decoder fans instruction signals out to the rest of the machine.
+   panel(50,210,142,120,'INSTRUCTION');panel(250,188,132,176,'DECODER');
+   ctx.strokeStyle=color+'66';line([[192,270],[250,270]]);
+   for(let output=0;output<4;output++){
+    const yy=160+output*81;panel(465,yy,128,57,['FETCH','READ','WRITE','EXECUTE'][output]);
+    ctx.strokeStyle=color+'55';line([[382,230+output*28],[415,230+output*28],[443,yy+29],[465,yy+29]]);
+    const active=Math.floor(elapsed*2)%4===output;ctx.fillStyle=active?color:color+'33';ctx.fillRect(478,yy+40,100,4);
+   }
+   label('CONTROL SIGNALS',315,465);
+  }else if(stageIndex===2){
+   // Named register banks store individual bits, with PC and IR highlighted.
+   for(let row=0;row<5;row++){
+    const yy=163+row*62;panel(65,yy,510,48,'');label(['PC','IR','ACC','R0','R1'][row],100,yy+30,15);
+    for(let bit=0;bit<12;bit++){
+     const x=145+bit*33;ctx.fillStyle=color+'18';ctx.fillRect(x,yy+9,25,30);
+     label(String((bit+row+Math.floor(elapsed))%2),x+12,yy+30,16);
+    }
+   }
+   label('REGISTER FILE / IMMEDIATE ACCESS',320,145);
+  }else if(stageIndex===3){
+   // Two operands feed an arithmetic/logic block and a result bus.
+   panel(45,178,140,77,'OPERAND A');panel(45,330,140,77,'OPERAND B');
+   label('0101',115,234,19);label('0011',115,386,19);
+   ctx.strokeStyle=color+'77';line([[185,218],[234,218],[264,270]]);line([[185,369],[234,369],[264,321]]);
+   ctx.fillStyle=color+'16';ctx.beginPath();ctx.moveTo(264,199);ctx.lineTo(390,253);ctx.lineTo(390,340);ctx.lineTo(264,397);ctx.lineTo(264,320);ctx.lineTo(292,298);ctx.lineTo(264,275);ctx.closePath();ctx.fill();ctx.stroke();
+   label('ALU',332,307,25);line([[390,297],[457,297]]);panel(457,255,135,86,'RESULT');label('1000',524,317,20);
+   ['+','?','AND','OR'].forEach((op,i)=>label(op,120+i*132,463,23));
+  }else if(stageIndex===4){
+   // Cache hierarchy: tiny L1 beside the core, then larger L2/L3 banks.
+   panel(28,236,98,126,'CORE');
+   for(let bank=0;bank<3;bank++){
+    const x=158+bank*148,yy=210-bank*26,hh=150+bank*52;
+    panel(x,yy,125,hh,['L1','L2','L3'][bank]);
+    for(let row=0;row<3+bank*2;row++)for(let col=0;col<4;col++){
+     ctx.fillStyle=(row+col+Math.floor(elapsed*2))%7===0?color+'88':color+'22';ctx.fillRect(x+12+col*26,yy+43+row*20,20,12);
+    }
+    ctx.strokeStyle=color+'66';line([[x-32,298],[x,298]]);
+   }
+   label('HOT DATA / SHORTER PATHS',320,467);
+  }else{
+   // Oscillator crystal and square-wave timing lanes.
+   panel(42,224,122,145,'OSCILLATOR');
+   ctx.strokeStyle=color+'99';ctx.beginPath();ctx.ellipse(103,309,35,18,0,0,Math.PI*2);ctx.stroke();
+   for(let lane=0;lane<3;lane++){
+    const yy=187+lane*104;label(['CLK','SYNC','CYCLE'][lane],224,yy+24,12);
+    ctx.strokeStyle=color+'88';const points=[];
+    for(let x=270;x<=608;x+=2){const high=((x-270+elapsed*48+lane*28)%100)<50;points.push([x,yy+(high?0:48)]);}
+    line(points);
+   }
+   label('TICK / SYNCHRONIZE / REPEAT',320,482);
+  }
+  ctx.restore();
+ }
+}
 function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.draw();return;}if(state==='map-transition'){window.cpuOpening?.draw(ctx,W,H,4,transitionTime,Math.min(1,transitionTime/1.8));return;}if(state==='ready')window.cpuOpening?.home(previous/1000);if(state==='intro'){if(introEntry>.6)window.cpuOpening?.home(previous/1000);window.cpuOpening?.draw(ctx,W,H,storyPage,storyTime);return;}
  const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#100d1c');bg.addColorStop(1,stageData().background);ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.lineWidth=1;ctx.strokeStyle=stageData().color+'25';
  for(let x=-(distance*.22%80);x<W;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let yy=10;yy<H;yy+=80){ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(W,yy);ctx.stroke();}
- // Repeating motherboard panels scroll behind the playfield at a slower speed.
- const boardOffset=distance*.18%640;
- for(let tile=-1;tile<3;tile++){
-  const bx=tile*640-boardOffset;
-  ctx.save();ctx.translate(bx,0);
-  // Parallel copper traces with characteristic 45-degree bends and solder pads.
-  for(let lane=0;lane<9;lane++){
-   const yy=128+lane*43, bend=70+(lane%3)*32;
-   ctx.strokeStyle=lane%3===0?'#43cfbb44':'#39749255';ctx.lineWidth=2;
-   ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(bend,yy);ctx.lineTo(bend+30,yy-30);ctx.lineTo(410,yy-30);ctx.lineTo(450,yy+10);ctx.lineTo(640,yy+10);ctx.stroke();
-   ctx.beginPath();ctx.arc(bend,yy,4,0,Math.PI*2);ctx.stroke();
-   ctx.beginPath();ctx.arc(475,yy+10,4,0,Math.PI*2);ctx.stroke();
-   // Small signals follow the actual trace path and freeze with the run.
-   const points=[[0,yy],[bend,yy],[bend+30,yy-30],[410,yy-30],[450,yy+10],[640,yy+10]];
-   let travel=(distance*.35+lane*79)%700;
-   for(let j=1;j<points.length;j++){
-    const [ax,ay]=points[j-1],[ex,ey]=points[j],length=Math.hypot(ex-ax,ey-ay);
-    if(travel<=length){ctx.fillStyle='#65ffe299';ctx.beginPath();ctx.arc(ax+(ex-ax)*travel/length,ay+(ey-ay)*travel/length,2.5,0,Math.PI*2);ctx.fill();break;}travel-=length;
-   }
-  }
-  // Processor socket and metallic pins.
-  ctx.fillStyle='#11283e';ctx.strokeStyle='#35647b';ctx.lineWidth=2;ctx.fillRect(165,194,182,170);ctx.strokeRect(165,194,182,170);
-  ctx.fillStyle='#5b8a9d';
-  for(let pin=0;pin<10;pin++){const p=pin*14;ctx.fillRect(181+p,184,5,10);ctx.fillRect(181+p,364,5,10);ctx.fillRect(155,208+p,10,5);ctx.fillRect(347,208+p,10,5);}
-  ctx.fillStyle='#0b1a2d';ctx.fillRect(180,209,152,140);ctx.strokeStyle='#55c7bb66';ctx.strokeRect(190,219,132,120);
-  ctx.textAlign='center';ctx.font='bold 26px monospace';ctx.fillStyle='#77c8ca88';ctx.fillText('CPU',256,277);ctx.font='11px monospace';ctx.fillStyle='#618ca7';ctx.fillText('CSC / 3501',256,302);
-  // RAM bank, contacts, and cylindrical capacitors.
-  ctx.fillStyle='#173c47';ctx.fillRect(405,170,161,58);ctx.strokeStyle='#367380';ctx.strokeRect(405,170,161,58);
-  for(let chip=0;chip<4;chip++){ctx.fillStyle='#0c2032';ctx.fillRect(415+chip*37,180,28,32);}
-  ctx.fillStyle='#9d986955';for(let pin=0;pin<19;pin++)ctx.fillRect(410+pin*8,229,4,8);
-  ctx.font='10px monospace';ctx.fillStyle='#77aeb7';ctx.fillText('MEMORY / DDR',485,160);
-  for(let cap=0;cap<3;cap++){const cx=430+cap*44;ctx.fillStyle='#122c42';ctx.fillRect(cx-12,390,24,35);ctx.fillStyle='#45667e';ctx.beginPath();ctx.ellipse(cx,390,12,6,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#8ba0ac';ctx.beginPath();ctx.moveTo(cx-6,390);ctx.lineTo(cx+6,390);ctx.stroke();}
-  // Board screws and status LEDs.
-  for(const sy of [115,480]){ctx.strokeStyle='#50728766';ctx.beginPath();ctx.arc(30,sy,7,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(26,sy);ctx.lineTo(34,sy);ctx.stroke();}
-  ctx.fillStyle='#64ffe288';ctx.fillRect(575,295,5,5);ctx.fillStyle='#70a7ff88';ctx.fillRect(575,309,5,5);
-  ctx.restore();
- }
+ drawLevelBackdrop();
  ctx.fillStyle='#091629';ctx.fillRect(0,FLOOR,W,H-FLOOR);ctx.shadowColor=stageData().color;ctx.shadowBlur=16;ctx.fillStyle=stageData().color;ctx.fillRect(0,FLOOR,W,3);ctx.shadowBlur=0;ctx.strokeStyle='#204052';for(let x=-(distance%64);x<W;x+=64)ctx.strokeRect(x,FLOOR+22,52,52);
  // Dark breaks in the board mark lethal gaps between solid chip blocks.
- for(const g of gaps){ctx.fillStyle='#030611';ctx.fillRect(g.x,FLOOR,g.w,H-FLOOR);ctx.strokeStyle='#ff517b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(g.x,FLOOR+8);ctx.lineTo(g.x,H);ctx.moveTo(g.x+g.w,FLOOR+8);ctx.lineTo(g.x+g.w,H);ctx.stroke();}
+ for(const g of gaps){ctx.fillStyle='#030611';ctx.fillRect(g.x,FLOOR,g.w,H-FLOOR);ctx.strokeStyle='#ff517b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(g.x,FLOOR+8);ctx.lineTo(g.x,H);ctx.moveTo(g.x+g.w,FLOOR+8);ctx.lineTo(g.x+g.w,H);ctx.stroke();drawPitElectricity(g);}
  for(const p of platforms){
   const top=FLOOR-p.h,thickness=p.thickness??p.h;
   if(p.wire){
@@ -467,6 +574,26 @@ function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.dra
    ctx.textAlign='center';ctx.font='bold 16px monospace';ctx.fillStyle='#fff0bc';ctx.fillText('LOW TUNNEL / STAY DOWN',o.x+o.w/2,top+38);
    ctx.restore();continue;
   }
+  if(o.logicGate){
+   const top=FLOOR-o.h;
+   ctx.save();ctx.translate(o.x,top);ctx.strokeStyle='#83e8ff';ctx.lineWidth=2;ctx.fillStyle='#15384c';ctx.shadowColor='#54d9ff';ctx.shadowBlur=10;
+   // Recognizable circuit symbols: rounded AND, curved OR, triangular NOT.
+   ctx.beginPath();
+   if(o.logicGate==='AND'){
+    ctx.moveTo(10,3);ctx.lineTo(28,3);ctx.bezierCurveTo(51,3,51,37,28,37);ctx.lineTo(10,37);ctx.closePath();
+   }else if(o.logicGate==='OR'){
+    ctx.moveTo(7,3);ctx.quadraticCurveTo(33,1,47,20);ctx.quadraticCurveTo(33,39,7,37);ctx.quadraticCurveTo(21,20,7,3);
+   }else{ctx.moveTo(10,3);ctx.lineTo(41,20);ctx.lineTo(10,37);ctx.closePath();}
+   ctx.fill();ctx.stroke();
+   if(o.logicGate==='NOT'){ctx.beginPath();ctx.arc(45,20,4,0,Math.PI*2);ctx.stroke();}
+   ctx.beginPath();
+   for(const yy of o.logicGate==='NOT'?[20]:[11,29]){ctx.moveTo(0,yy);ctx.lineTo(12,yy);}
+   ctx.moveTo(48,20);ctx.lineTo(54,20);ctx.stroke();ctx.shadowBlur=0;
+   ctx.fillStyle='#83e8ff';ctx.fillRect(7,40,40,8);
+   ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillStyle='#d9faff';ctx.fillText(o.logicGate,27,28);
+   ctx.font='bold 11px monospace';ctx.fillStyle='#83e8ff';ctx.fillText('JUMP',27,-12);
+   ctx.restore();continue;
+  }
   const height=obstacleHeight(o);
   if(o.popup&&height<o.h){
    ctx.fillStyle='#fff1bd';ctx.fillRect(o.x-4,FLOOR-3,o.w+8,3);
@@ -491,11 +618,9 @@ function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.dra
   // Metal emitter, base, and collector leads reach down to the board.
   ctx.strokeStyle='#c4b4c7';ctx.lineWidth=3;ctx.lineCap='round';
   for(const pin of [.22,.5,.78]){ctx.beginPath();ctx.moveTo(o.w*pin,bodyHeight-2);ctx.lineTo(o.w*pin,o.h-2);ctx.stroke();}
-  ctx.shadowColor='#ff517b';ctx.shadowBlur=12;ctx.fillStyle='#302339';ctx.strokeStyle='#ff7595';ctx.lineWidth=2;
+  ctx.shadowColor='#ff517b';ctx.shadowBlur=12;ctx.fillStyle='#000000';ctx.strokeStyle='#ff517b';ctx.lineWidth=2;
   // The sloped shoulders give the plastic casing a recognizable transistor shape.
   ctx.beginPath();ctx.moveTo(2,bodyHeight);ctx.lineTo(2,9);ctx.lineTo(9,1);ctx.lineTo(o.w-9,1);ctx.lineTo(o.w-2,9);ctx.lineTo(o.w-2,bodyHeight);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
-  ctx.strokeStyle='#91627f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(8,10);ctx.lineTo(o.w-8,10);ctx.stroke();
-  ctx.textAlign='center';ctx.font='bold 9px monospace';ctx.fillStyle='#ffd3df';ctx.fillText('NPN',o.w/2,bodyHeight-5);
   ctx.restore();
  }
  // Collectible hearts scroll with the course, separate from the HUD hearts.
@@ -510,7 +635,7 @@ function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.dra
  if(!freePlay&&finishX<W+80){ctx.fillStyle='#f6efde';ctx.fillRect(finishX,FLOOR-145,5,145);ctx.fillStyle=stageData().color;ctx.fillRect(finishX+5,FLOOR-145,65,38);ctx.fillStyle='#14111d';ctx.font='bold 12px monospace';ctx.textAlign='left';ctx.fillText('EXIT',finishX+16,FLOOR-120);}
  // Original pixel sprites: a small signal courier and the corruption chasing it.
  const tint=stageData().color;
- ctx.fillStyle=tint;ctx.globalAlpha=.12;ctx.font='bold 72px monospace';ctx.textAlign='center';ctx.fillText(stageData().name,W/2,110);ctx.globalAlpha=.5;ctx.font='14px monospace';ctx.fillText(stageData().landmark,W/2,144);ctx.globalAlpha=1;
+ if(!freePlay){ctx.fillStyle=tint;ctx.globalAlpha=.12;ctx.font='bold 72px monospace';ctx.textAlign='center';ctx.fillText(stageData().name,W/2,110);ctx.globalAlpha=1;}
  function sprite(rows,px,py,scale,palette){rows.forEach((row,yy)=>[...row].forEach((c,xx)=>{if(palette[c]){ctx.fillStyle=palette[c];ctx.fillRect(Math.round(px+xx*scale),Math.round(py+yy*scale),scale,scale);}}));}
  const bob=state==='running'?Math.floor(Math.sin(distance*.07)*2):0;
  const bugX=boss.active?W*.25+(boss.hitTime>0?Math.sin(boss.hitTime*30)*12:0):state==='quiz'?X-80:65+Math.sin(elapsed*2)*12;
@@ -519,16 +644,17 @@ function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.dra
  const bugPalette={r:boss.hitTime>0?'#fff1bd':bugColor,w:'#fff1d5',a:stageData().color};
  if(boss.active&&boss.hp===0){
   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const t=reduced?1:Math.min(1,boss.deathTime/.4),center=bugX+bugScale*5;
+  const meltAge=Math.max(0,boss.deathTime-BOSS_SHOT_TIME);
+  const t=boss.deathTime<BOSS_SHOT_TIME?0:reduced?1:Math.min(1,meltAge/.55),center=bugX+bugScale*5;
   if(t<1){
    ctx.save();ctx.translate(center,FLOOR);ctx.scale(1+t*.7,Math.max(.08,1-t));
    sprite(bugLooks[stageIndex],-bugScale*5,-bugScale*8,bugScale,bugPalette);ctx.restore();
   }
-  ctx.fillStyle=bugColor;ctx.beginPath();ctx.ellipse(center,FLOOR-5,bugScale*(5+2*t),4+7*t,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=stageData().color;ctx.fillRect(center-24,FLOOR-10,18,4);ctx.fillRect(center+16,FLOOR-8,12,3);
-  if(!reduced&&boss.deathTime<.9){
+  if(t>0){ctx.fillStyle=bugColor;ctx.beginPath();ctx.ellipse(center,FLOOR-5,bugScale*(5+2*t),4+7*t,0,0,Math.PI*2);ctx.fill();}
+  if(t>0){ctx.fillStyle=stageData().color;ctx.fillRect(center-24,FLOOR-10,18,4);ctx.fillRect(center+16,FLOOR-8,12,3);}
+  if(!reduced&&meltAge>0&&meltAge<.65){
    for(let i=0;i<12;i++){
-    const age=boss.deathTime,vx=(i-5.5)*45,vy=-140-(i%3)*65;
+    const age=meltAge,vx=(i-5.5)*45,vy=-140-(i%3)*65;
     const dx=center+vx*age,dy=FLOOR-12+vy*age+360*age*age;
     if(dy<FLOOR)ctx.fillRect(dx,dy,5+i%3*2,5+i%3*2);
    }
@@ -541,6 +667,18 @@ function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.dra
  if(boss.active){ctx.translate(W*.73+SIZE,0);ctx.scale(-1,1);ctx.translate(-X,0);}
  sprite(characterRows,X,y+bob,4,characterPalette());ctx.globalAlpha=1;
  ctx.restore();
+ if(boss.active&&boss.hp===0&&boss.deathTime<BOSS_DEATH_DURATION){
+  const muzzleX=W*.73-10,muzzleY=y+24,targetX=bugX+bugScale*8,targetY=FLOOR-bugScale*4;
+  ctx.fillStyle='#b4cbd3';ctx.fillRect(muzzleX,muzzleY-5,26,10);ctx.fillStyle=stageData().color;ctx.fillRect(muzzleX+18,muzzleY-8,9,16);
+  if(boss.deathTime<BOSS_SHOT_TIME){
+   const travel=boss.deathTime/BOSS_SHOT_TIME,shotX=muzzleX+(targetX-muzzleX)*travel,shotY=muzzleY+(targetY-muzzleY)*travel;
+   ctx.save();ctx.shadowColor=stageData().color;ctx.shadowBlur=20;ctx.strokeStyle=stageData().color;ctx.lineWidth=6;
+   ctx.beginPath();ctx.moveTo(shotX+32,shotY);ctx.lineTo(shotX,shotY);ctx.stroke();ctx.fillStyle='#fff5d9';ctx.fillRect(shotX-4,shotY-4,8,8);ctx.restore();
+  }else if(boss.deathTime<BOSS_SHOT_TIME+.12){
+   ctx.strokeStyle='#fff1bd';ctx.lineWidth=3;
+   for(let ray=0;ray<8;ray++){const angle=ray*Math.PI/4;ctx.beginPath();ctx.moveTo(targetX+Math.cos(angle)*12,targetY+Math.sin(angle)*12);ctx.lineTo(targetX+Math.cos(angle)*30,targetY+Math.sin(angle)*30);ctx.stroke();}
+  }
+ }
  if(boss.active&&boss.hp>0&&boss.hitTime>0){ctx.strokeStyle=stageData().color;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(W*.73,y+24);ctx.lineTo(bugX+bugScale*10,FLOOR-bugScale*4);ctx.stroke();}
  // Subtle scanlines unify the scene without obscuring hazards.
  ctx.fillStyle='#00000015';for(let sy=0;sy<H;sy+=4)ctx.fillRect(0,sy,W,1);
