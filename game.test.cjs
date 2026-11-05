@@ -19,7 +19,7 @@ function setup(random=Math.random,captureDrawing=false,storage=new Map()){
  vm.runInContext(source,sandbox);
  let time=0;function tick(n){for(let i=0;i<n;i++){time+=1000/60;frame(time);}}
  function go(index){for(let n=0;n<420;n++)sandbox.physics.step(1/120);elements['map-nodes'].children[index].click();for(let n=0;n<2400;n++)sandbox.physics.step(1/120);elements['map-enter'].click();}
- return {elements,listeners,tick,go,drawing,world:sandbox.window.cpuMap,physics:sandbox.physics,review:sandbox.window.cpuReview,reviewCorrect:()=>vm.runInContext('[...cpuQuestions,...cpuBossQuestions].find(q=>q.question===document.getElementById("review-question").textContent).correctAnswer',sandbox),correct:()=>vm.runInContext('[...cpuQuestions,...cpuBossQuestions].find(q=>q.question===document.getElementById("title").textContent).correctAnswer',sandbox)};
+ return {elements,listeners,tick,go,drawing,character:sandbox.window.cpuCharacter,world:sandbox.window.cpuMap,physics:sandbox.physics,review:sandbox.window.cpuReview,reviewCorrect:()=>vm.runInContext('[...cpuQuestions,...cpuBossQuestions].find(q=>q.question===document.getElementById("review-question").textContent).correctAnswer',sandbox),correct:()=>vm.runInContext('[...cpuQuestions,...cpuBossQuestions].find(q=>q.question===document.getElementById("title").textContent).correctAnswer',sandbox)};
 }
 function defeatBoss(s){
  assert.equal(s.physics.get().state,'boss-intro');s.elements.action.click();
@@ -380,4 +380,80 @@ test('a boss skip spends one coin for one damage and cannot be spent on answered
  assert.equal(s.physics.get().attempts,0);assert.equal(s.physics.get().correctCount,0);assert.equal(s.physics.get().state,'boss-result');
  e['skip-question'].click();assert.equal(s.physics.get().bossHp,2);
  e.action.click();assert.equal(e['skip-question'].disabled,true);e['skip-question'].click();assert.equal(s.physics.get().bossHp,2);
+});
+
+test('free play passes the story endpoint, ends on collision, and restarts at zero',()=>{
+ const s=setup(),e=s.elements;
+ e['free-play-tab'].click();assert.equal(e['free-play-panel'].hidden,false);assert.equal(e['map-panel'].hidden,true);
+ e['free-play-start'].click();
+ s.physics.set({elapsed:61,distance:25000});s.physics.step(1/120);
+ assert.equal(s.physics.get().state,'running');assert.equal(s.physics.get().bossActive,false);
+ assert.match(e.chapter.textContent,/ENDLESS/);assert.equal(e.hearts.hidden,true);
+ s.physics.set({obstacles:[{x:220,w:48,h:54}]});s.physics.step(1/120);
+ assert.equal(s.physics.get().state,'over');assert.equal(e.answers.children.length,0);
+ assert.match(e.description.textContent+e.title.textContent,/caught|Distance/);
+ e.action.click();assert.equal(e.score.textContent,0);assert.equal(s.physics.get().state,'running');
+});
+
+test('free play high score persists separately and returning selects its tab',()=>{
+ const storage=new Map(),s=setup(Math.random,false,storage),e=s.elements;
+ e['free-play-start'].click();s.physics.set({distance:4321});s.physics.step(1/120);
+ assert.equal(storage.get('cpuEscapeFreeBest'),'432');assert.equal(storage.has('cpuEscapeBest'),false);
+ e['back-map'].click();e['leave-level'].click();
+ assert.equal(e['free-play-panel'].hidden,false);assert.equal(e['free-play-best'].textContent,'High score: 432 m');
+ const reload=setup(Math.random,false,storage);reload.elements['free-play-tab'].click();
+ assert.equal(reload.elements['free-play-best'].textContent,'High score: 432 m');
+ reload.elements['free-play-start'].click();assert.equal(reload.elements.best.textContent,'BEST 432 m');
+});
+
+test('electrical arc pulses, freezes on pause, and can be jumped over',()=>{
+ const s=setup(),e=s.elements;e['free-play-start'].click();
+ s.physics.set({spawnCount:6});s.physics.spawn();
+ const arc=s.physics.loot().obstacles.find(o=>o.arc);assert.ok(arc);assert.equal(arc.w,64);
+ s.physics.step(1/120);assert.ok(arc.age>0);
+ s.listeners.keydown({code:'KeyP',repeat:false});const age=arc.age;s.physics.step(1/60);assert.equal(arc.age,age);
+ e.action.click();
+ s.physics.set({y:420,vy:0,grounded:false,obstacles:[{x:220,w:64,h:68,arc:true,age:Math.PI/10}]});
+ s.physics.step(1/120);assert.equal(s.physics.get().state,'running');
+ s.physics.set({y:528,vy:0,grounded:true});s.physics.step(1/120);assert.equal(s.physics.get().state,'over');
+});
+
+test('low tunnel permits running but jumping into its ceiling ends either mode immediately',()=>{
+ for(const free of [false,true]){
+  const s=setup(),e=s.elements;if(free)e['free-play-start'].click();else e.action.click();
+  s.physics.set({spawnCount:10});s.physics.spawn();
+  const tunnel=s.physics.loot().obstacles.find(o=>o.tunnel);assert.ok(tunnel);
+  tunnel.x=200;
+  for(let i=0;i<6;i++)s.physics.step(1/120);
+  assert.equal(s.physics.get().state,'running');assert.equal(s.physics.loot().revives,3);
+  s.listeners.keydown({code:'Space',repeat:false,preventDefault(){}});
+  for(let i=0;i<15&&s.physics.get().state==='running';i++)s.physics.step(1/120);
+  assert.equal(s.physics.get().state,'over');assert.equal(e.answers.children.length,0);
+  assert.match(e.title.textContent,/tunnel ceiling/);
+ }
+});
+
+
+test('shop spends coins once, equips owned styles freely, and restores purchases after reload',()=>{
+ const storage=new Map([['cpuEscapePractice',JSON.stringify({coins:6,progress:0})]]);
+ const s=setup(Math.random,false,storage),e=s.elements;e['shop-tab'].click();
+ assert.equal(e['shop-panel'].hidden,false);assert.equal(e['shop-items'].children.length,5);
+ const original=s.character.palette().c;
+ e['shop-items'].children[1].children[2].click();
+ assert.equal(s.review.getCoins(),4);assert.equal(s.character.palette().c,'#a8ffd5');
+ e['shop-items'].children[0].children[2].click();assert.equal(s.character.palette().c,original);
+ e['shop-items'].children[1].children[2].click();assert.equal(s.review.getCoins(),4);
+ s.physics.set({stageIndex:5});assert.equal(s.character.palette().c,'#a8ffd5');
+ const reload=setup(Math.random,false,storage);assert.equal(reload.character.palette().c,'#a8ffd5');
+ assert.equal(reload.review.getCoins(),4);reload.elements['shop-tab'].click();
+ assert.equal(reload.elements['shop-items'].children[1].children[2].textContent,'Equipped');
+});
+
+test('shop blocks unaffordable purchases and ignores invalid saved styles',()=>{
+ const storage=new Map([['cpuEscapeCharacter',JSON.stringify({owned:['missing'],equipped:'missing'})]]);
+ const s=setup(Math.random,false,storage),e=s.elements;e['shop-tab'].click();
+ assert.equal(s.character.palette().c,'#a8bbdb');
+ const buy=e['shop-items'].children[4].children[2];assert.equal(buy.disabled,true);
+ buy.click();assert.equal(s.review.getCoins(),0);assert.equal(s.character.palette().c,'#a8bbdb');
+ assert.equal(s.review.spendCoins(-1),false);assert.equal(s.review.spendCoins(0.5),false);
 });

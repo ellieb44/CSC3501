@@ -88,3 +88,13 @@
 #stage #skip-question{background:#322c1d;color:#ffdf83;border:1px solid #b49b58;padding:10px 14px}
 #stage #skip-question:disabled{opacity:.6;cursor:not-allowed}
 @media(max-width:600px){#review-answers{grid-template-columns:1fr}.review-card{padding:16px}.review-heading h2{font-size:18px}.review-progress{flex-wrap:wrap}#level-toolbar{flex-wrap:wrap}}
+
+.map-tabs{flex-wrap:wrap}
+#shop-panel{max-width:900px;margin:0 auto;padding:6px 0 24px}
+#shop-panel>p{font-size:13px;line-height:1.65;color:#d7d9d6}
+#shop-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.shop-card{background:#0c0b14;border:1px solid #6b7d70;padding:18px;text-align:center}
+.shop-card canvas{width:100px;height:100px;margin:auto;image-rendering:pixelated;background:#16232e}
+.shop-card h3{font-size:15px}.shop-card button{width:100%;font-size:12px;padding:10px}
+.shop-card button:disabled{opacity:.55;cursor:default}
+#shop-feedback{min-height:1.6em;color:#ffdf83}

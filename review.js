@@ -17,11 +17,12 @@ const entries=[
 let batch=[],questionIndex=0,batchCorrect=0,answered=false;
 function save(){try{localStorage.setItem(storageKey,JSON.stringify({coins,progress}));}catch{}}
 function refreshWallet(){
- for(const id of ['coin-balance','game-coins','review-coins'])document.getElementById(id).textContent='Coins: '+coins;
+ for(const id of ['coin-balance','game-coins','review-coins','shop-coins'])document.getElementById(id).textContent='Coins: '+coins;
  document.getElementById('review-progress').value=progress;
  document.getElementById('review-progress-text').textContent=progress+' / 10 correct';
 }
-function spendCoin(){if(coins<1)return false;coins--;save();refreshWallet();return true;}
+function spendCoins(amount){if(!Number.isSafeInteger(amount)||amount<1||coins<amount)return false;coins-=amount;save();refreshWallet();return true;}
+function spendCoin(){return spendCoins(1);}
 function show(entry){
  if(!entry)return;answered=false;question.textContent=entry.q.question;feedback.textContent='';answers.replaceChildren();
  nextButton.disabled=true;nextButton.textContent=questionIndex===9?'Start 10 new questions':'Next question';
@@ -50,5 +51,5 @@ function next(){
 }
 nextButton.addEventListener('click',next);
 refreshWallet();newBatch();
-window.cpuReview={open(){refreshWallet();},close(){},getCoins:()=>coins,getProgress:()=>progress,spendCoin};
+window.cpuReview={open(){refreshWallet();},close(){},getCoins:()=>coins,getProgress:()=>progress,spendCoin,spendCoins};
 })();
