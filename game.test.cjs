@@ -43,6 +43,57 @@ test('pause freezes score and speed; resume advances gradually',()=>{
  s.listeners.keydown({code:'KeyP',repeat:false});s.tick(120);assert.equal(e.score.textContent,score);assert.equal(e.speed.textContent,speed);
  e.action.click();s.tick(30);assert.ok(Number(e.score.textContent)>Number(score));assert.ok(parseFloat(e.speed.textContent)<1.1);
 });
+
+test('repeated collisions open only one quiz and deduct one heart', () => {
+  const s = setup();
+  const e = s.elements;
+
+  // Begin the CPU level.
+  e.action.click();
+
+  // Force the player to fall into a gap.
+  s.physics.set({
+    y: 540,
+    vy: 300,
+    grounded: false,
+    gaps: [{ x: 180, w: 150 }]
+  });
+  s.physics.step(1 / 120);
+
+  // The first collision opens a quiz and removes one heart.
+  assert.equal(s.physics.get().state, 'quiz');
+  assert.equal(e.answers.children.length, 4);
+
+  const originalQuestion = e.title.textContent;
+  const lostHearts = e.hearts.children.filter(
+    heart => heart.className === 'heart lost'
+  ).length;
+
+  assert.equal(lostHearts, 1);
+
+  // Repeated updates must not trigger another collision.
+  for (let i = 0; i < 30; i++) {
+    s.physics.step(1 / 120);
+  }
+
+  // Verify the original quiz and health remain unchanged.
+  assert.equal(s.physics.get().state, 'quiz');
+  assert.equal(e.title.textContent, originalQuestion);
+  assert.equal(e.answers.children.length, 4);
+  assert.equal(
+    e.hearts.children.filter(
+      heart => heart.className === 'heart lost'
+    ).length,
+    1
+  );
+
+  // Answering the question should still allow normal recovery.
+  e.answers.children[s.correct()].click();
+  assert.equal(s.physics.get().state, 'saved');
+
+  e.action.click();
+  assert.equal(s.physics.get().state, 'running');
+});
 test('descending onto a block lands safely and allows another jump',()=>{
  const s=setup();s.elements.action.click();
  s.physics.set({y:460,vy:300,grounded:false,platforms:[{x:200,w:180,h:64}]});
