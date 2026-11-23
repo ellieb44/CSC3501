@@ -34,7 +34,7 @@ test('jump, pause, quiz focus, and map controls retain their behavior',async({pa
  const errors=await boot(page);await enterCPU(page);
  const playerTop=()=>page.evaluate(()=>{
   const data=cpuGame.textures.get('cpu-artwork').context.getImageData(231,300,1,269).data;
-  for(let y=0;y<269;y++)if(data[y*4]===168&&data[y*4+1]===255&&data[y*4+2]===213)return y+300;
+  for(let y=0;y<269;y++)if(data[y*4]===168&&data[y*4+1]===187&&data[y*4+2]===219)return y+300;
   return 570;
  });
  const floorTop=await playerTop();
@@ -135,6 +135,7 @@ async function practiceCorrectly(page,count){
  }
 }
 test('review earns persistent coins and spends them on real run and boss questions',async({page})=>{
+ await page.addInitScript(()=>localStorage.setItem('cpuEscapeCoinGrant10','1'));
  const errors=await bootBossFixture(page);await openReview(page);
  await expect(page.locator('#review-panel select')).toHaveCount(0);
  await expect(page.locator('#review-count')).toContainText('Question 1 / 10');

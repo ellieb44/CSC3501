@@ -19,11 +19,14 @@ skipButton.addEventListener('click',()=>{
 });
 const characterRows=['...hhhh...','..hhhhhh..','..hssssh..','...seses..','...ssss...','..cccccc..','.cccccccc.','..cccccc..','...cccc...','...l..l...'];
 const characterStyles=[
- {id:'classic',name:'Classic courier',price:0,h:'#ece3d0',c:'#a8bbdb',l:'#9180ac'},
- {id:'mint',name:'Mint circuit',price:2,h:'#ece3d0',c:'#a8ffd5',l:'#39796b'},
- {id:'sunset',name:'Sunset runner',price:3,h:'#794552',c:'#ff9b71',l:'#803a64'},
- {id:'violet',name:'Violet hacker',price:4,h:'#d7b8ff',c:'#b274f5',l:'#61509b'},
- {id:'gold',name:'Golden signal',price:5,h:'#ffe6a1',c:'#ffd76e',l:'#a87835'}
+ {id:'classic',name:'Classic courier',price:0,h:'#ece3d0',c:'#a8bbdb',l:'#9180ac',ability:'No power-up'},
+ {id:'lsu-fan',name:'LSU Fan',price:6,h:'#f4d35e',c:'#592a8a',l:'#e5bd35',ability:'A new LSU look'},
+ {id:'lane-kiffin',name:'Lane Kiffin',price:8,h:'#d8b477',c:'#6b3b98',l:'#d7c5a0',ability:'Double coins earned'},
+ {id:'mike',name:'Mike the Tiger',price:10,h:'#f39832',c:'#eaa02e',l:'#4c275f',ability:'Double distance high scores'},
+ {id:'football',name:'Football Player',price:12,h:'#f2c938',c:'#562783',l:'#eee8dc',ability:'Start each run with an extra life'},
+ {id:'student',name:'Computer Science Student',price:14,h:'#342535',c:'#7047a5',l:'#303459',ability:'Eliminate two incorrect answers'},
+ {id:'golden-girl',name:'Golden Girl',price:16,h:'#eacb74',c:'#f3d54c',l:'#f7e8a3',ability:'One automatic recovery per run'},
+ {id:'felipe',name:'Felipe Fronchetti',price:24,h:'#292329',c:'#1d2432',l:'#34323a',ability:'Automatically answer boss questions correctly'}
 ];
 let ownedStyles=new Set(['classic']),equippedStyle='classic';
 try{
@@ -31,16 +34,174 @@ try{
  if(Array.isArray(saved?.owned))for(const id of saved.owned)if(characterStyles.some(style=>style.id===id))ownedStyles.add(id);
  if(ownedStyles.has(saved?.equipped))equippedStyle=saved.equipped;
 }catch{}
-function characterPalette(){const style=characterStyles.find(style=>style.id===equippedStyle);return {h:style.h,s:'#e5b88f',e:'#191326',c:style.c,l:style.l};}
-window.cpuCharacter={palette:characterPalette};
+function characterSprite(id=equippedStyle){
+ if(id==='felipe')return [
+  '......hhhhhhhh......',
+  '.....hhhhhhhhhh.....',
+  '....hhhhhhhhhhhh....',
+  '....hhssssssshhh....',
+  '....ssssssssssss....',
+  '....ssessssessss....',
+  '....ssssssssssss....',
+  '.....ssssssssss.....',
+  '.....shhhhhhhh s.....'.replace(' ',''),
+  '......shhhhhs.......',
+  '....cccccccccc......',
+  '...cccccccccccc.....',
+  '..cccccccccccccc....',
+  '..cccccccccccccc....',
+  '..cccccccccccccc....',
+  '...cccccccccccc.....',
+  '.....llllllllll.....',
+  '.....llll..llll.....',
+  '.....llll..llll.....',
+  '....wwwww..wwwww....'
+ ];
+ if(id==='student')return [
+  '......hhhhhhhh......',
+  '.....hhhhhhhhhh.....',
+  '....hhhhhhhhhhhh....',
+  '....hhsssssshhss....',
+  '....sdddddddddds....',
+  '....sdwwddwwdds.....',
+  '....sdwwddwwdds.....',
+  '....sddddddddds.....',
+  '.....sssssssss......',
+  '......ssessss.......',
+  '....wwwwppwwww......',
+  '...wwwwwppwwwww.....',
+  '..sswwwwppwwwwss....',
+  '..sswwwwppwwdddddd..',
+  '..sswwwwppwwdbbbbdd.',
+  '..sswwwwppwwdbbbbdd.',
+  '...swwwwppwwdddddd..',
+  '.....lllll llll.....'.replace(' ',''),
+  '.....llll..llll.....',
+  '.....dddd..dddd.....'
+ ];
+ if(id==='lsu-fan')return [
+  '......wwwwwwww......',
+  '.....wwwwwwwwww.....',
+  '....wwwwwwwwwwww....',
+  '..wwwwwwwwwwwwwwww..',
+  '.wwwwwwwwwwwwwwwwww.',
+  '..hhhhsssssshhhh....',
+  '...hddddddddddh.....',
+  '...hdbbbddbbbdh.....',
+  '...hdbbbddbbbdh.....',
+  '....ssssssssss......',
+  '....ssssswwsss......',
+  '.....ssssssss.......',
+  '....scgsssgcs.......',
+  '...sscggggcsss......',
+  '..ssscgcgcgcsss.....',
+  '..ssscgcgcgcsss.....',
+  '...sscgcgcgcss......',
+  '.....cgcgcgcg.......',
+  '.....cgc..gcg.......',
+  '.....cgc..gcg.......'
+ ];
+ if(id==='lane-kiffin')return [
+  '......hhhhhhh.......',
+  '....hhhhhhhhhhh.....',
+  '...ddhhhhhhhhddd....',
+  '..ddwwwwwwwwwddd....',
+  '..dwwwwppwwwwwdd....',
+  '..dwwwwwwwwwwwwd....',
+  '..ddwwwwwwwwwwww....',
+  '..ddssssssssss......',
+  '..ddssesssesssd.....',
+  '..ddssssssssssd.....',
+  '...dsssssssssd......',
+  '...ddsssssssd.......',
+  '....dddddsssd.......',
+  '.....wwwwwwwwww.....',
+  '...wwwwwwwwpwwwww...',
+  '..wwwwwwwwwppwwwww..',
+  '..wwwwwwwwwwwwwwww..',
+  '...wwwwwwwwwwwwww...',
+  '.....llllllllll.....',
+  '.....llll..llll.....'
+ ];
+ if(id==='mike')return [
+  '...hh..........hh...',
+  '..hdhh........hddh..',
+  '..hhhhhhhhhhhhhhhh..',
+  '...hhhdhhhdhhhhdh...',
+  '...hhdhhhhhdhhdhh...',
+  '...hhhdhhhhhdhhh....',
+  '...hhwddhhddwhhh....',
+  '...hhwdehhdew hhh...'.replace(' ',''),
+  '...hhhsssssshhh.....',
+  '....hsssdsssshh.....',
+  '.....wwsdswww.......',
+  '......wwdww.........',
+  '....hhdhhhhhdhh.....',
+  '...hhhdhhhhhdhhh....',
+  '..hhhhdhhhhhdhhhh...',
+  '..hhhdhhhhhhhdhhh...',
+  '...hhdhhhhhhhdhh....',
+  '.....hhdhhhdhh......',
+  '.....hhh....hhh.....',
+  '.....ddd....ddd.....'
+ ];
+ if(id==='football')return [
+  '......gggggggg......',
+  '.....ggggppgggg.....',
+  '....gggggppggggg....',
+  '....gggggggggggg....',
+  '....ggddddddgggg....',
+  '....gdssssssddgg....',
+  '....gdssesssddgg....',
+  '....gddsssssddgg....',
+  '.....ddddddddd......',
+  '......sssssss.......',
+  '...ppggwwwwggpp.....',
+  '..ppggwwppwwggpp....',
+  '..sswwwwppwwwwss....',
+  '..sswwwwppwwwwss....',
+  '..sswwwwwwwwwwsfff..',
+  '..sswwwwwwwwwwsfwf..',
+  '...swwwwwwwwwwsfff..',
+  '.....gggggggggg.....',
+  '.....gggg..gggg.....',
+  '.....gggg..gggg.....'
+ ];
+ if(id==='golden-girl')return [
+  '......hhhhhhhh......',
+  '.....hhhhhhhhhh.....',
+  '....hhhhhhhhhhhh....',
+  '....hhhsssssshhh....',
+  '....hhssessesshh....',
+  '....hhsssssssshh....',
+  '....hhssswsssshh....',
+  '....hhhsssssshhh....',
+  '...hhhhsssssshhhh...',
+  '...hhgwwgwwgwwghh...',
+  '..sssgwgwggwgwgsss..',
+  '..ggsgwwgwwgwwgsgg..',
+  '..ggsgwgwggwgwgsgg..',
+  '...wwgwwgwwgwwgww...',
+  '....wgwwgwwgwwgw....',
+  '.....wwgwwwwgww.....',
+  '......sswwwwss......',
+  '......ssssssss......',
+  '......sss..sss......',
+  '......ggg..ggg......'
+ ];
+ return characterRows;
+}
+function characterPalette(id=equippedStyle){const style=characterStyles.find(style=>style.id===id);return {h:style.h,s:'#e5b88f',e:'#191326',c:style.c,l:style.l,w:'#f5f5f2',d:'#1d2028',p:'#57218a',b:'#53c9ed',g:'#ffbd25',f:'#8b4823'};}
+window.cpuCharacter={palette:characterPalette,has:id=>equippedStyle===id};
+function hideWrongAnswers(q,buttons){if(equippedStyle!=='student')return;let removed=0;buttons.forEach((button,i)=>{if(i!==q.correctAnswer&&removed<2){button.disabled=true;button.classList.add('eliminated');button.setAttribute('aria-label',button.textContent+' (eliminated)');removed++;}});}
 function renderShop(){
  const items=document.getElementById('shop-items');items.replaceChildren();
  document.getElementById('shop-coins').textContent=`Coins: ${window.cpuReview.getCoins()}`;
  characterStyles.forEach(style=>{
   const card=document.createElement('article');card.className='shop-card';
   const preview=document.createElement('canvas');preview.width=80;preview.height=80;preview.setAttribute('aria-label',style.name+' preview');preview.setAttribute('role','img');
-  const paint=preview.getContext('2d'),palette={...characterPalette(),h:style.h,c:style.c,l:style.l};
-  characterRows.forEach((row,y)=>[...row].forEach((pixel,x)=>{if(palette[pixel]){paint.fillStyle=palette[pixel];paint.fillRect(20+x*4,20+y*4,4,4);}}));
+  const paint=preview.getContext('2d'),palette=characterPalette(style.id),pixelSize=['lane-kiffin','lsu-fan','football','student','golden-girl','felipe','mike'].includes(style.id)?2:4;
+  characterSprite(style.id).forEach((row,y)=>[...row].forEach((pixel,x)=>{if(palette[pixel]){paint.fillStyle=palette[pixel];paint.fillRect(20+x*pixelSize,20+y*pixelSize,pixelSize,pixelSize);}}));
   const name=document.createElement('h3');name.textContent=style.name;
   const button=document.createElement('button');button.type='button';
   const owned=ownedStyles.has(style.id),equipped=style.id===equippedStyle;
@@ -56,7 +217,7 @@ function renderShop(){
    document.getElementById('shop-feedback').textContent=style.name+' equipped.';
    renderShop();document.getElementById('shop-items').children[characterStyles.indexOf(style)].children[2].focus();
   });
-  card.append(preview);card.append(name);card.append(button);items.append(card);
+  card.append(preview);card.append(name);card.append(button);const ability=document.createElement('p');ability.textContent=style.ability;card.append(ability);items.append(card);
  });
 }
 const mapTabs=['map-tab','review-tab','free-play-tab','shop-tab'];
@@ -116,8 +277,18 @@ const difficulty=[
 ];
 const runDistance=(index,seconds)=>(620*seconds-26000*(1-Math.exp(-seconds/100)))*difficulty[index].speed;
 const stageLength=index=>runDistance(index,stageDuration(index));
+const FINISH_CLEARANCE=300;
+const finishScreenX=()=>X+Math.max(0,stageLength(stageIndex)-runDistance(stageIndex,elapsed));
 const stageStart=index=>Array.from({length:index},(_,i)=>stageLength(i)).reduce((sum,length)=>sum+length,0);
-let stageIndex=0,gateAt=stageLength(0),gate=false,recovery=false,correctCount=0,attempts=0;
+let stageIndex=0,gateAt=stageLength(0),gate=false,recovery=false,correctCount=0,attempts=0,levelWrong=0,levelDeaths=0;
+let levelStars=Array(cpuStages.length).fill(null);
+try{const saved=JSON.parse(localStorage.getItem('cpuEscapeLevelStars')||'null');if(Array.isArray(saved))levelStars=levelStars.map((_,i)=>Number.isInteger(saved[i])&&saved[i]>=0&&saved[i]<=3?saved[i]:null);}catch{}
+function awardLevelStars(){
+ const stars=Math.max(0,3-levelWrong-(levelDeaths>0?1:0));
+ levelStars[stageIndex]=Math.max(levelStars[stageIndex]??0,stars);
+ try{localStorage.setItem('cpuEscapeLevelStars',JSON.stringify(levelStars));}catch{}
+ return stars;
+}
 const stageData=()=>cpuStages[stageIndex];
 function blendColor(a,b,amount){
  const channels=[1,3,5].map(offset=>Math.round(parseInt(a.slice(offset,offset+2),16)*(1-amount)+parseInt(b.slice(offset,offset+2),16)*amount));
@@ -147,7 +318,8 @@ function followJump(dt){
 }
 
 const MAX_REVIVES=3;
-let revives=MAX_REVIVES;
+let revives=MAX_REVIVES,automaticRecovery=false;
+const reviveLimit=()=>MAX_REVIVES+(equippedStyle==='football'?1:0);
 const BOSS_SHOT_TIME=.28,BOSS_DEATH_DURATION=.9;
 const boss={active:false,hp:0,maxHp:0,questions:[],hitTime:0,deathTime:0};
 const bossStatus=document.getElementById('boss-status'),bossHealth=document.getElementById('boss-health'),bossHp=document.getElementById('boss-hp');
@@ -170,20 +342,25 @@ function askBossQuestion(){
  q.options.forEach((option,i)=>{
   const button=document.createElement('button');button.textContent=String.fromCharCode(65+i)+'. '+option;
   button.addEventListener('click',()=>resolveBossQuestion(q,i,button));ui.answers.append(button);
- });ui.answers.firstElementChild.focus();
+ });
+ if(equippedStyle==='felipe'){resolveBossQuestion(q,q.correctAnswer,null);return;}
+ hideWrongAnswers(q,[...ui.answers.children]);[...ui.answers.children].find(button=>!button.disabled)?.focus();
  offerSkip(()=>resolveBossQuestion(q,q.correctAnswer,null,true));
 }
 function resolveBossQuestion(q,index,button,skipped=false){
  if(state!=='boss-question')return;hideSkip();
  const correct=index===q.correctAnswer;
+ if(!correct){levelWrong++;window.cpuReview.recordMiss(q);}
  if(!skipped)attempts++;
  if(correct){if(!skipped)correctCount++;boss.hp--;boss.hitTime=.6;}
- const lost=!correct&&revives===0;
- if(!correct&&!lost)revives--;
+ const recovered=!correct&&automaticRecovery;
+ if(recovered){if(revives===0)levelDeaths++;automaticRecovery=false;}
+ const lost=!correct&&!recovered&&revives===0;
+ if(!correct&&!lost&&!recovered)revives--;
  state=lost?'boss-over':boss.hp===0?'boss-defeated':'boss-result';
  [...ui.answers.children].forEach((b,n)=>{b.disabled=true;if(n===q.correctAnswer)b.classList.add('correct');});
  if(!correct)button.classList.add('wrong');
- const message=skipped?'Coin spent. Question skipped; the bug loses 1 HP. ':correct?(boss.hp===0?'The bug is defeated! ':'Hit! The bug loses 1 HP. '):lost?'The bug wins. ':'The bug strikes! You lose a revive. ';
+ const message=skipped?'Coin spent. Question skipped; the bug loses 1 HP. ':correct?(boss.hp===0?'The bug is defeated! ':'Hit! The bug loses 1 HP. '):lost?'The bug wins. ':recovered?'Automatic recovery! ':'The bug strikes! You lose a revive. ';
  window.cpuDialogue.write(ui.feedback,message+q.explanation);
  ui.action.hidden=false;ui.action.textContent=lost?'Retry this level':boss.hp===0?'Finish level':'Next attack';
  action=lost?()=>enterLevel(stageIndex):boss.hp===0?completeGate:askBossQuestion;
@@ -191,32 +368,72 @@ function resolveBossQuestion(q,index,button,skipped=false){
  updateBossHealth();hud();ui.action.focus();window.cpuAudio?.effect(correct?'correct':'wrong');
 }
 
-let pickups=[],heartNumber=1;
+let pickups=[],heartNumber=1,jumpPickups=[],nextJumpPickup=600,slowPickups=[],nextSlowPickup=3000,ghostPickups=[],nextGhostPickup=1800,ghostTime=0,slowTime=0,doubleJump=0,jumpNotice=0,noticeText='',airJumpUsed=false;
 const heartDistance=n=>500*n+100*(n-1);
+function updateJumpPickups(){
+ while(X+SIZE/2+nextJumpPickup*10-distance<=W+30){
+  if(!doubleJump)jumpPickups.push({at:nextJumpPickup,x:0,y:0});
+  nextJumpPickup+=3600;
+ }
+ for(const pickup of jumpPickups){
+  pickup.x=X+SIZE/2+pickup.at*10-distance;
+  let surface=FLOOR;
+  for(const p of platforms)if(pickup.x>=p.x&&pickup.x<=p.x+p.w)surface=Math.min(surface,FLOOR-p.h);
+  pickup.y=surface-52;
+  if(pickup.x+16>X&&pickup.x-16<X+SIZE&&pickup.y+16>y&&pickup.y-16<y+SIZE){doubleJump=10;jumpNotice=2;noticeText='DOUBLE JUMP / 10 SECONDS';jumpPickups=[];window.cpuAudio?.effect('correct');break;}
+ }
+ jumpPickups=jumpPickups.filter(pickup=>pickup.x>-30);
+}
+function updateGhostPickups(){
+ while(X+SIZE/2+nextGhostPickup*10-distance<=W+30){ghostPickups.push({at:nextGhostPickup,x:0,y:0});nextGhostPickup+=3600;}
+ for(const pickup of ghostPickups){
+  pickup.x=X+SIZE/2+pickup.at*10-distance;
+  let surface=FLOOR;
+  for(const p of platforms)if(pickup.x>=p.x&&pickup.x<=p.x+p.w)surface=Math.min(surface,FLOOR-p.h);
+  pickup.y=surface-52;
+  if(pickup.x+16>X&&pickup.x-16<X+SIZE&&pickup.y+16>y&&pickup.y-16<y+SIZE){
+   ghostTime=5;noticeText='GHOST MODE / 5 SECONDS';jumpNotice=2;pickup.collected=true;window.cpuAudio?.effect('correct');
+  }
+ }
+ ghostPickups=ghostPickups.filter(pickup=>!pickup.collected&&pickup.x>-30);
+}
+function updateSlowPickups(){
+ while(X+SIZE/2+nextSlowPickup*10-distance<=W+30){slowPickups.push({at:nextSlowPickup,x:0,y:0});nextSlowPickup+=3600;}
+ for(const pickup of slowPickups){
+  pickup.x=X+SIZE/2+pickup.at*10-distance;
+  let surface=FLOOR;
+  for(const p of platforms)if(pickup.x>=p.x&&pickup.x<=p.x+p.w)surface=Math.min(surface,FLOOR-p.h);
+  pickup.y=surface-52;
+  if(pickup.x+16>X&&pickup.x-16<X+SIZE&&pickup.y+16>y&&pickup.y-16<y+SIZE){
+   slowTime=6;speed=360*.9;noticeText='SLOW DOWN / 6 SECONDS';jumpNotice=2;pickup.collected=true;window.cpuAudio?.effect('correct');
+  }
+ }
+ slowPickups=slowPickups.filter(pickup=>!pickup.collected&&pickup.x>-30);
+}
 function updatePickups(){
  // Distance uses ten world pixels per displayed meter. Preview each pickup
  // ahead of time so it reaches the player at its scheduled meter mark.
  while(X+SIZE/2+heartDistance(heartNumber)*10-distance<=W+30){
-  if(revives<MAX_REVIVES)pickups.push({at:heartDistance(heartNumber),x:0,y:0});
+  if(revives<reviveLimit())pickups.push({at:heartDistance(heartNumber),x:0,y:0});
   heartNumber++;
  }
- if(revives===MAX_REVIVES)pickups=[];
+ if(revives>=reviveLimit())pickups=[];
  for(const heart of pickups){
   heart.x=X+SIZE/2+heart.at*10-distance;
   let surface=FLOOR;
   for(const p of platforms)if(heart.x>=p.x&&heart.x<=p.x+p.w)surface=Math.min(surface,FLOOR-p.h);
   heart.y=surface-52;
   const touches=heart.x+16>X&&heart.x-16<X+SIZE&&heart.y+16>y&&heart.y-16<y+SIZE;
-  if(touches){revives=Math.min(MAX_REVIVES,revives+1);heart.collected=true;}
+  if(touches){revives=Math.min(reviveLimit(),revives+1);heart.collected=true;}
  }
  pickups=pickups.filter(heart=>!heart.collected&&heart.x>-30);
 }
-const hearts=Array.from({length:MAX_REVIVES},()=>{const heart=document.createElement('span');ui.hearts.append(heart);return heart;});
-function showHearts(){hearts.forEach((heart,i)=>{heart.textContent=i<revives?'♥':'💔';heart.className=i<revives?'heart':'heart lost';});ui.hearts.ariaLabel=`${revives} of ${MAX_REVIVES} revives remaining`;}
+const hearts=Array.from({length:MAX_REVIVES+1},()=>{const heart=document.createElement('span');ui.hearts.append(heart);return heart;});
+function showHearts(){hearts.forEach((heart,i)=>{heart.hidden=i>=reviveLimit();heart.textContent=i<revives?'♥':'💔';heart.className=heart.hidden?'':i<revives?'heart':'heart lost';});ui.hearts.ariaLabel=`${revives} of ${reviveLimit()} revives remaining`;}
 try{best=Number(localStorage.getItem('cpuEscapeBest'))||0;}catch{}
-function hud(){ui.hearts.hidden=freePlay;document.getElementById('chapter').textContent=freePlay?'FREE PLAY / ENDLESS':`${String(stageIndex+1).padStart(2,'0')} / ${stageData().name} / ${Math.min(100,Math.floor(elapsed/stageDuration(stageIndex)*100))}%`;ui.score.textContent=Math.floor(distance/10);ui.best.textContent=`BEST ${freePlay?freeBest:best} m`;ui.speed.textContent=boss.active?'BOSS FIGHT':`${(speed/360).toFixed(2)}× SPEED`;showHearts();}
+function hud(){ui.hearts.hidden=freePlay;document.getElementById('chapter').textContent=freePlay?'FREE PLAY / ENDLESS':`${String(stageIndex+1).padStart(2,'0')} / ${stageData().name} / ${Math.min(100,Math.floor(elapsed/stageDuration(stageIndex)*100))}%`;ui.score.textContent=Math.floor(distance/10);ui.best.textContent=`BEST ${freePlay?freeBest:best} m`;ui.speed.textContent=boss.active?'BOSS FIGHT':`${(speed/360).toFixed(2)}× SPEED${doubleJump>0?' / DOUBLE JUMP '+Math.ceil(doubleJump)+'s':''}${ghostTime>0?' / GHOST '+Math.ceil(ghostTime)+'s':''}${slowTime>0?' / SLOW '+Math.ceil(slowTime)+'s':''}`;showHearts();}
 function saveFreeBest(){
- const score=Math.floor(distance/10);
+ const score=Math.floor(distance/10)*(equippedStyle==='mike'?2:1);
  if(score<=freeBest)return;
  freeBest=score;
  try{localStorage.setItem('cpuEscapeFreeBest',String(freeBest));}catch{}
@@ -226,10 +443,10 @@ function startFreePlay(){
  document.getElementById('level-location').textContent='FREE PLAY / ENDLESS RUN';
  hud();
 }
-function save(){best=Math.max(best,Math.floor(distance/10));try{localStorage.setItem('cpuEscapeBest',String(best));}catch{}}
+function save(){best=Math.max(best,Math.floor(distance/10)*(equippedStyle==='mike'?2:1));try{localStorage.setItem('cpuEscapeBest',String(best));}catch{}}
 function modal(label,title,description,button,callback){hideSkip();held=false;buffer=0;ui.overlay.hidden=false;ui.eyebrow.textContent=label;ui.title.textContent=title;window.cpuDialogue.clear();window.cpuDialogue.write(ui.description,description);ui.answers.replaceChildren();ui.feedback.textContent='';ui.action.textContent=button;ui.action.hidden=!button;action=callback;if(button)ui.action.focus();}
 function resume(){applyLevelColor();window.cpuDialogue.clear();ui.controls.hidden=false;ui.hud.hidden=false;state='running';held=false;buffer=0;ui.overlay.hidden=true;}
-function start(){freePlay=false;resetBoss();resetBugTrail();window.cpuAudio?.setScene(0);document.getElementById('level-toolbar').hidden=false;document.getElementById('world-map').hidden=true;ui.stage.classList.remove('story-mode');stageIndex=0;gateAt=stageLength(0);gate=false;recovery=false;correctCount=0;attempts=0;ui.home.hidden=true;ui.stage.hidden=false;ui.controls.hidden=false;ui.hud.hidden=false;revives=MAX_REVIVES;pickups=[];heartNumber=1;distance=0;elapsed=0;speed=360*.92;y=FLOOR-SIZE;vy=0;angle=0;obstacles=[];platforms=[];gaps=[];grounded=true;spawnCount=0;nextSpawn=850;invincible=0;resume();hud();canvas.focus();}
+function start(){freePlay=false;resetBoss();resetBugTrail();window.cpuAudio?.setScene(0);document.getElementById('level-toolbar').hidden=false;document.getElementById('world-map').hidden=true;ui.stage.classList.remove('story-mode');stageIndex=0;gateAt=stageLength(0);gate=false;recovery=false;correctCount=0;attempts=0;levelWrong=0;levelDeaths=0;ui.home.hidden=true;ui.stage.hidden=false;ui.controls.hidden=false;ui.hud.hidden=false;revives=reviveLimit();automaticRecovery=equippedStyle==='golden-girl';pickups=[];heartNumber=1;jumpPickups=[];nextJumpPickup=600;slowPickups=[];nextSlowPickup=3000;ghostPickups=[];nextGhostPickup=1800;ghostTime=0;slowTime=0;doubleJump=0;jumpNotice=0;noticeText='';airJumpUsed=false;distance=0;elapsed=0;speed=360*.92;y=FLOOR-SIZE;vy=0;angle=0;obstacles=[];platforms=[];gaps=[];grounded=true;spawnCount=0;nextSpawn=850;invincible=0;resume();hud();canvas.focus();}
 ui.action.addEventListener('click',()=>{ui.overlay.style.opacity='1';action?.();});
 function lesson(){applyLevelColor();document.getElementById('level-location').textContent='LEVEL '+(stageIndex+1)+' / '+stageData().name;state='lesson';modal('SECTOR '+(stageIndex+1)+' / '+stageData().name,stageData().name,stageData().lesson,'Run this sector',resume);}
 const story=[['Welcome to CPU Escape.','Just a boy, his bedroom, and one more night at the computer.'],['Something is wrong.','The screen hums. The computer shakes. Then he starts shaking, too.'],['POOF!','A strange force pulls him toward the screen... and the boy disappears.'],['OH NO!','You are trapped inside the computer! And something is coming for you.'],['Find your way home.','Outrun the bug. Cross each computer component. Reach every exit to escape alive.']];
@@ -238,8 +455,8 @@ function intro(){introEntry=window.matchMedia?.('(prefers-reduced-motion: reduce
 function storyStep(dt){if(introEntry>0){introEntry=Math.max(0,introEntry-dt);const t=1.2-introEntry,curtain=document.getElementById('scene-curtain');const p=Math.min(1,t<.6?t/.6:introEntry/.6);curtain.style.opacity=String(p*p*(3-2*p));if(t>=.6){ui.home.hidden=true;ui.stage.hidden=false;}if(introEntry===0)curtain.hidden=true;return;}storyTime+=dt;const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;const opacity=reduced?1:Math.min(1,storyTime/.85,(5.8-storyTime)/.85);ui.overlay.style.opacity=String(Math.max(0,opacity));if(storyTime>=5.8){storyPage++;storyTime=0;if(storyPage>=story.length)walkToMap();else storyCard();}}
 let transitionTime=0;
 function walkToMap(){introEntry=0;document.getElementById('scene-curtain').hidden=true;ui.home.hidden=true;ui.stage.hidden=false;state='map-transition';transitionTime=0;held=false;ui.overlay.hidden=false;ui.action.hidden=true;ui.title.textContent='Follow the signal.';window.cpuDialogue.clear();window.cpuDialogue.write(ui.description,'The boy steps onto a path through the computer.');ui.overlay.style.opacity='1';if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)showMap(true);}
-function showMap(arrival=false){const wasFreePlay=freePlay;if(freePlay)saveFreeBest();freePlay=false;resetBoss();window.cpuDialogue.clear();window.cpuAudio?.setScene('map');document.getElementById('level-toolbar').hidden=true;state='map';selectMapTab(false);held=false;buffer=0;ui.overlay.style.opacity='1';ui.stage.classList.remove('story-mode');ui.stage.hidden=true;ui.hud.hidden=true;ui.controls.hidden=true;ui.home.hidden=true;document.getElementById('world-map').hidden=false;window.cpuMap.show({unlocked,current:stageIndex,arrival,onEnter:enterLevel});if(wasFreePlay){selectMapTab('free-play-tab');document.getElementById('free-play-start').focus();}}
-function enterLevel(index){if(index>unlocked)return;start();stageIndex=index;speed=360*difficulty[index].speed;window.cpuAudio?.setScene(index);distance=stageStart(index);gateAt=distance+stageLength(index);nextSpawn=distance+850;heartNumber=1;while(heartDistance(heartNumber)*10<distance)heartNumber++;lesson();ui.hud.hidden=true;hud();}
+function showMap(arrival=false){const wasFreePlay=freePlay;if(freePlay)saveFreeBest();freePlay=false;resetBoss();window.cpuDialogue.clear();window.cpuAudio?.setScene('map');document.getElementById('level-toolbar').hidden=true;state='map';selectMapTab(false);held=false;buffer=0;ui.overlay.style.opacity='1';ui.stage.classList.remove('story-mode');ui.stage.hidden=true;ui.hud.hidden=true;ui.controls.hidden=true;ui.home.hidden=true;document.getElementById('world-map').hidden=false;window.cpuMap.show({unlocked,current:stageIndex,arrival,stars:levelStars,onEnter:enterLevel});if(wasFreePlay){selectMapTab('free-play-tab');document.getElementById('free-play-start').focus();}}
+function enterLevel(index){if(index>unlocked)return;start();stageIndex=index;speed=360*difficulty[index].speed;window.cpuAudio?.setScene(index);distance=stageStart(index);gateAt=distance+stageLength(index);nextSpawn=distance+850;heartNumber=1;while(heartDistance(heartNumber)*10<distance)heartNumber++;nextJumpPickup=Math.floor(distance/36000)*3600+600;if(nextJumpPickup*10<distance)nextJumpPickup+=3600;nextSlowPickup=Math.floor(distance/36000)*3600+3000;if(nextSlowPickup*10<distance)nextSlowPickup+=3600;nextGhostPickup=Math.floor(distance/36000)*3600+1800;if(nextGhostPickup*10<distance)nextGhostPickup+=3600;lesson();ui.hud.hidden=true;hud();}
 ui.start.addEventListener('click',()=>intro());
 ui.hud.hidden=true;ui.stage.hidden=true;ui.controls.hidden=true;
 // A separate dialog preserves the exact quiz, lesson, or pause screen underneath.
@@ -253,20 +470,21 @@ document.getElementById('leave-level').addEventListener('click',()=>{if(state!==
 leaveDialog.addEventListener('keydown',e=>{if(e.code==='Escape'){e.preventDefault();cancelMap();}if(e.code==='Tab'){e.preventDefault();(document.activeElement===stayButton?document.getElementById('leave-level'):stayButton).focus();}});
 function pause(){if(state==='map'){window.cpuMap.stop();return;}if(state!=='running')return;state='paused';modal('CIRCUIT / PAUSED','Catch your breath.','Your distance and speed are preserved.','Resume →',resume);}
 function clearRunway(){resetBugTrail();obstacles=[];platforms=[];gaps=[];grounded=true;nextSpawn=distance+speed*2;y=FLOOR-SIZE;vy=0;invincible=1.5;resume();}
-function completeGate(){if(boss.active&&boss.hp===0&&boss.deathTime<BOSS_DEATH_DURATION)return;resetBoss();window.cpuAudio?.effect('clear');save();unlocked=Math.max(unlocked,stageIndex+1);gate=false;state='cleared';if(unlocked>=cpuStages.length&&stageIndex===cpuStages.length-1){state='won';modal('COMPUTER / ESCAPE SUCCESSFUL','The boy is finally home.',`All ${cpuStages.length} routes cleared. You outran the bug and learned how the computer works. First-answer accuracy this run: ${correctCount}/${attempts}.`,'Return to map',showMap);return;}modal('LEVEL / CLEARED',stageData().name+' complete!',cpuStages[stageIndex+1].name+' is now unlocked. The bug is still out there. Choose your next stop on the map.','Return to map',showMap);}
+function completeGate(){if(boss.active&&boss.hp===0&&boss.deathTime<BOSS_DEATH_DURATION)return;resetBoss();window.cpuAudio?.effect('clear');save();const earnedStars=awardLevelStars(),rating=`Stars: ${earnedStars} / 3. Best: ${levelStars[stageIndex]} / 3.`;unlocked=Math.max(unlocked,stageIndex+1);gate=false;state='cleared';if(unlocked>=cpuStages.length&&stageIndex===cpuStages.length-1){state='won';modal('COMPUTER / ESCAPE SUCCESSFUL','The boy is finally home.',`All ${cpuStages.length} routes cleared. You outran the bug and learned how the computer works. First-answer accuracy this run: ${correctCount}/${attempts}. ${rating}`,'Return to map',showMap);return;}modal('LEVEL / CLEARED',stageData().name+' complete!',cpuStages[stageIndex+1].name+' is now unlocked. '+rating+' Choose your next stop on the map.','Return to map',showMap);}
 function askQuestion(isRecovery=false){
  state='quiz';recovery=isRecovery;const q=cpuQuestions[nextQuestion()];
  modal((gate?'SECTOR GATE':'BUG ENCOUNTER')+(isRecovery?' / RECOVERY':' / CPU CHECK'),q.question,isRecovery?'One more chance. Use the explanation you just learned.':gate?'Prove what you learned to open the next sector.':'The bug caught you. Answer to escape. A wrong answer gives you an explanation and one recovery question.','',null);
  q.options.forEach((option,i)=>{const button=document.createElement('button');button.textContent=String.fromCharCode(65+i)+'. '+option;button.addEventListener('click',()=>{
- if(state!=='quiz')return;hideSkip();const correct=i===q.correctAnswer;if(!isRecovery){attempts++;if(correct)correctCount++;}state=correct?'saved':isRecovery?'over':'review';
+ if(state!=='quiz')return;hideSkip();const correct=i===q.correctAnswer;if(!correct){levelWrong++;window.cpuReview.recordMiss(q);}if(!isRecovery){attempts++;if(correct)correctCount++;}state=correct?'saved':isRecovery?'over':'review';
  [...ui.answers.children].forEach((b,n)=>{b.disabled=true;if(n===q.correctAnswer)b.classList.add('correct');});if(!correct)button.classList.add('wrong');
  ui.eyebrow.textContent=correct?'SIGNAL RESTORED':isRecovery?'SIGNAL LOST':'LEARN / TRY AGAIN';window.cpuDialogue.write(ui.feedback,(correct?'Correct. ':isRecovery?'Run ended. ':'Study this: ')+q.explanation);
+ if(!correct&&automaticRecovery){automaticRecovery=false;ui.action.hidden=false;ui.action.textContent='Automatic recovery';action=()=>gate?completeGate():clearRunway();ui.action.focus();window.cpuAudio?.effect('wrong');return;}
  ui.action.hidden=false;ui.action.textContent=correct?(gate?'Open gate':'Escape the bug'):isRecovery?'Retry this level':'Try recovery question';action=correct?(gate?completeGate:clearRunway):isRecovery?()=>enterLevel(stageIndex):()=>askQuestion(true);ui.action.focus();window.cpuAudio?.effect(correct?'correct':'wrong');
- });ui.answers.append(button);});ui.answers.firstElementChild.focus();
+ });ui.answers.append(button);});hideWrongAnswers(q,[...ui.answers.children]);[...ui.answers.children].find(button=>!button.disabled)?.focus();
  offerSkip(()=>{if(gate)completeGate();else clearRunway();});
 }
-function crash(lethal=false){if(state!=='running')return;if(lethal)revives=0;if(freePlay){saveFreeBest();state='over';hud();window.cpuAudio?.effect('stuck');modal('FREE PLAY / RUN OVER',lethal?'You hit the tunnel ceiling.':'The bug caught you.',`Distance: ${Math.floor(distance/10)} m. High score: ${freeBest} m.`,'Play again',startFreePlay);return;}window.cpuAudio?.effect('stuck');save();if(revives===0){state='over';hud();modal('SYSTEM / GAME OVER',lethal?'You hit the tunnel ceiling.':'No revives left.',`Your run ended at ${Math.floor(distance/10)} m.`,'Retry this level',()=>enterLevel(stageIndex));return;}revives--;gate=false;hud();askQuestion();}
-function press(){if(state==='running'){if(!held)window.cpuAudio?.effect('jump');held=true;buffer=.12;}}
+function crash(lethal=false){if(state!=='running')return;if(freePlay){if(equippedStyle==='football'&&revives>3){revives--;clearRunway();hud();return;}if(automaticRecovery){automaticRecovery=false;clearRunway();hud();return;}saveFreeBest();state='over';hud();window.cpuAudio?.effect('stuck');modal('FREE PLAY / RUN OVER',lethal?'You hit the tunnel ceiling.':'The bug caught you.',`Distance: ${Math.floor(distance/10)} m. High score: ${freeBest} m.`,'Play again',startFreePlay);return;}if(lethal)revives=0;window.cpuAudio?.effect('stuck');save();if(revives===0&&automaticRecovery){levelDeaths++;automaticRecovery=false;clearRunway();hud();return;}if(revives===0){state='over';hud();modal('SYSTEM / GAME OVER',lethal?'You hit the tunnel ceiling.':'No revives left.',`Your run ended at ${Math.floor(distance/10)} m.`,'Retry this level',()=>enterLevel(stageIndex));return;}revives--;gate=false;hud();askQuestion();}
+function press(){if(state==='running'){if(!held){window.cpuAudio?.effect('jump');if(doubleJump>0&&!grounded&&!airJumpUsed){vy=-830;airJumpUsed=true;buffer=0;held=true;return;}}held=true;buffer=.12;}}
 window.addEventListener('keydown',e=>{if(e.target?.getAttribute?.('role')==='tab')return;if(e.code==='Space'&&((boss.active&&state!=='confirm-leave')||['quiz','saved','review','over'].includes(state))){e.preventDefault();return;}if(state==='map'){if(e.target?.tagName==='BUTTON'&&['Enter','Space'].includes(e.code))return;window.cpuMap.key(e,true);return;}if(['Space','ArrowUp','KeyW'].includes(e.code)&&state==='running'){e.preventDefault();if(!e.repeat)press();}if(e.code==='KeyP'&&!e.repeat){if(state==='paused')resume();else pause();}});
 window.addEventListener('keyup',e=>{if(e.code==='Space'&&((boss.active&&state!=='confirm-leave')||['quiz','saved','review','over'].includes(state)))e.preventDefault();if(state==='map'){window.cpuMap.key(e,false);return;}if(['Space','ArrowUp','KeyW'].includes(e.code))held=false;});
 canvas.addEventListener('pointerdown',e=>{e.preventDefault();canvas.setPointerCapture(e.pointerId);press();});canvas.addEventListener('pointerup',()=>held=false);canvas.addEventListener('pointercancel',()=>held=false);
@@ -354,12 +572,19 @@ function step(dt){if(state!=='confirm-leave'&&introEntry<=0)window.cpuDialogue.u
  const before=boss.deathTime;boss.deathTime+=dt;
  if(before<BOSS_SHOT_TIME&&boss.deathTime>=BOSS_SHOT_TIME)window.cpuAudio?.effect('splat');
  if(before<BOSS_DEATH_DURATION&&boss.deathTime>=BOSS_DEATH_DURATION){ui.overlay.hidden=false;ui.action.focus();}
- }}return;}if(state!=='running')return;elapsed+=dt;speed=(360+260*(1-Math.exp(-elapsed/100)))*difficulty[stageIndex].speed;distance+=speed*dt;invincible=Math.max(0,invincible-dt);buffer=Math.max(0,buffer-dt);
+ }}return;}if(state!=='running')return;doubleJump=Math.max(0,doubleJump-dt);ghostTime=Math.max(0,ghostTime-dt);slowTime=Math.max(0,slowTime-dt);jumpNotice=Math.max(0,jumpNotice-dt);elapsed+=dt;speed=slowTime>0?360*.9:(360+260*(1-Math.exp(-elapsed/100)))*difficulty[stageIndex].speed;distance+=speed*dt;invincible=Math.max(0,invincible-dt);buffer=Math.max(0,buffer-dt);
  if(grounded&&(held||buffer>0)){vy=-830;buffer=0;grounded=false;}
  const wasGrounded=grounded;
  const previousBottom=y+SIZE;vy+=2400*dt;y+=vy*dt;
  if(!freePlay&&elapsed+1e-8>=stageDuration(stageIndex)){elapsed=stageDuration(stageIndex);distance=gateAt;beginBoss();hud();return;}
  if(distance>=nextSpawn)spawn();
+ if(!freePlay){
+  // Keep the entire final approach and the area beyond the flag free of hazards.
+  const clearFrom=finishScreenX()-FINISH_CLEARANCE;
+  obstacles=obstacles.filter(o=>o.x+o.w<clearFrom);
+  platforms=platforms.filter(p=>p.x+p.w<clearFrom);
+  gaps=gaps.filter(g=>g.x+g.w<clearFrom);
+ }
  for(const items of [obstacles,platforms,gaps]){for(const o of items)o.x-=speed*dt;}
  for(const o of obstacles)if(o.arc)o.age+=dt;
  for(const o of obstacles)if(o.falling){
@@ -368,7 +593,7 @@ function step(dt){if(state!=='confirm-leave'&&introEntry<=0)window.cpuDialogue.u
  }
  for(const o of obstacles)if(o.popup&&o.x-(X+SIZE)<=speed*1.35)o.rise=Math.min(1,(o.rise??0)+dt/.25);
  obstacles=obstacles.filter(o=>o.x+o.w>-30);platforms=platforms.filter(o=>o.x+o.w>-30);gaps=gaps.filter(o=>o.x+o.w>-30);
- if(!freePlay)updatePickups();
+ updateJumpPickups();updateSlowPickups();updateGhostPickups();if(!freePlay)updatePickups();
  grounded=false;
  const left=X+6,right=X+SIZE-6;
  // Resolve the wire as one walkable surface, rather than colliding with
@@ -386,13 +611,14 @@ function step(dt){if(state!=='confirm-leave'&&introEntry<=0)window.cpuDialogue.u
   if(right<=p.x||left>=p.x+p.w)continue;
   const top=FLOOR-p.h;
   if(vy>=0&&((previousBottom<=top+.01&&y+SIZE>=top)||(p.ramp&&wasGrounded&&Math.abs(previousBottom-top)<speed*dt+4))){y=top-SIZE;vy=0;grounded=true;}
-  else if(y+SIZE>top+.01&&y<top+(p.thickness??p.h)&&!invincible){crash();hud();return;}
+  else if(y+SIZE>top+.01&&y<top+(p.thickness??p.h)&&!invincible&&ghostTime<=0){crash();hud();return;}
  }
- const overGap=gaps.some(g=>X+SIZE/2>g.x&&X+SIZE/2<g.x+g.w);
+ const overGap=ghostTime<=0&&gaps.some(g=>X+SIZE/2>g.x&&X+SIZE/2<g.x+g.w);
  if(!grounded&&!overGap&&previousBottom<=FLOOR+.01&&y+SIZE>=FLOOR&&vy>=0){y=FLOOR-SIZE;vy=0;grounded=true;}
  if(overGap&&y+SIZE>FLOOR+8||y>H){fall();return;}
+ if(grounded)airJumpUsed=false;
  if(grounded)angle=Math.round(angle/(Math.PI/2))*Math.PI/2;else angle+=Math.PI*2*dt/.7;
- followJump(dt);if(freePlay)saveFreeBest();const hit=obstacles.find(o=>(o.tunnel||!invincible)&&collision(o));if(hit)crash(!!hit.tunnel);hud();
+ followJump(dt);if(freePlay)saveFreeBest();const hit=ghostTime>0?null:obstacles.find(o=>(o.tunnel||!invincible)&&collision(o));if(hit)crash(!!hit.tunnel);hud();
 }
 // Component-specific scenery stays behind the hazards and freezes when paused.
 function drawPitElectricity(g){
@@ -623,6 +849,12 @@ function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.dra
   ctx.beginPath();ctx.moveTo(2,bodyHeight);ctx.lineTo(2,9);ctx.lineTo(9,1);ctx.lineTo(o.w-9,1);ctx.lineTo(o.w-2,9);ctx.lineTo(o.w-2,bodyHeight);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
   ctx.restore();
  }
+ // A glowing arrow marks the double-jump upgrade.
+ for(const pickup of [...jumpPickups,...slowPickups,...ghostPickups]){
+  ctx.save();ctx.translate(pickup.x,pickup.y);ctx.shadowColor='#9df8ff';ctx.shadowBlur=18;
+  ctx.fillStyle='#214f73';ctx.strokeStyle='#a8f8ff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,17,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.font='bold 18px monospace';ctx.textAlign='center';ctx.fillText('?',0,6);ctx.restore();
+ }
  // Collectible hearts scroll with the course, separate from the HUD hearts.
  for(const heart of pickups){
   ctx.save();ctx.translate(heart.x,heart.y);ctx.shadowColor='#ff6a91';ctx.shadowBlur=20;
@@ -630,8 +862,12 @@ function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.dra
   ctx.beginPath();ctx.moveTo(0,14);ctx.bezierCurveTo(-30,-3,-15,-24,0,-10);ctx.bezierCurveTo(15,-24,30,-3,0,14);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
   ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('+1',0,-27);ctx.restore();
  }
+ if(jumpNotice>0){
+  ctx.save();ctx.fillStyle='#101a2be8';ctx.fillRect(W/2-165,H/2-120,330,55);ctx.strokeStyle='#a8f8ff';ctx.lineWidth=3;ctx.strokeRect(W/2-165,H/2-120,330,55);
+  ctx.fillStyle='#fff';ctx.font='bold 20px monospace';ctx.textAlign='center';ctx.fillText(noticeText,W/2,H/2-85);ctx.restore();
+ }
  // The finish flag approaches at the exact level endpoint.
- const finishX=X+Math.max(0,stageLength(stageIndex)-runDistance(stageIndex,elapsed));
+ const finishX=finishScreenX();
  if(!freePlay&&finishX<W+80){ctx.fillStyle='#f6efde';ctx.fillRect(finishX,FLOOR-145,5,145);ctx.fillStyle=stageData().color;ctx.fillRect(finishX+5,FLOOR-145,65,38);ctx.fillStyle='#14111d';ctx.font='bold 12px monospace';ctx.textAlign='left';ctx.fillText('EXIT',finishX+16,FLOOR-120);}
  // Original pixel sprites: a small signal courier and the corruption chasing it.
  const tint=stageData().color;
@@ -662,10 +898,11 @@ function draw(){if(state==='practice')return;if(state==='map'){window.cpuMap.dra
  }else{
   sprite(bugLooks[stageIndex],bugX,(boss.active?FLOOR:bugFeet)-bugScale*8+bob,bugScale,bugPalette);
  }
- ctx.globalAlpha=invincible>0?.6:1;
+ ctx.globalAlpha=ghostTime>0?.42:invincible>0?.6:1;
  ctx.save();
+ if(ghostTime>0){ctx.translate(Math.sin(elapsed*37)*3,0);ctx.shadowColor='#a8f8ff';ctx.shadowBlur=14;}
  if(boss.active){ctx.translate(W*.73+SIZE,0);ctx.scale(-1,1);ctx.translate(-X,0);}
- sprite(characterRows,X,y+bob,4,characterPalette());ctx.globalAlpha=1;
+ sprite(characterSprite(),X,y+bob,['lane-kiffin','lsu-fan','football','student','golden-girl','felipe','mike'].includes(equippedStyle)?2:4,characterPalette());ctx.globalAlpha=1;
  ctx.restore();
  if(boss.active&&boss.hp===0&&boss.deathTime<BOSS_DEATH_DURATION){
   const muzzleX=W*.73-10,muzzleY=y+24,targetX=bugX+bugScale*8,targetY=FLOOR-bugScale*4;

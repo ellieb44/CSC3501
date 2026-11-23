@@ -103,3 +103,6 @@
 .record-label{font:bold 15px monospace;letter-spacing:4px;color:#ffdf83}
 #free-play-best{display:block;font:bold clamp(44px,8vw,76px)/1.15 monospace;color:#fff1bd;text-shadow:0 0 22px #ffdf8344;overflow-wrap:anywhere}
 .record-caption{font:11px monospace;letter-spacing:2px;color:#c6c9c8}
+
+/* Show which answers the Computer Science Student has eliminated. */
+#answers button.eliminated, #review-answers button.eliminated { opacity: .38; text-decoration: line-through; border-style: dashed; }
