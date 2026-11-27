@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 function setup(random=Math.random,captureDrawing=false,storage=new Map(),unlockAll=false){
+ if(!storage.has('cpuEscapeCoinGrant10'))storage.set('cpuEscapeCoinGrant10','1');
  const drawing=[],drawnLabels=[];
  const testMath=Object.create(Math);testMath.random=random;
  const elements={};const listeners={};let frame;
@@ -12,7 +13,7 @@ function setup(random=Math.random,captureDrawing=false,storage=new Map(),unlockA
  const sandbox={document,window:{addEventListener(n,f){listeners[n]=f;}},localStorage:{getItem:key=>storage.get(key)??null,setItem(key,value){storage.set(key,String(value));}},Phaser:{CANVAS:1,Scale:{NONE:0},Scene:class{},Game:class{constructor(config){this.config=config;const scene=new config.scene[0]();scene.textures={addCanvas(){}};scene.add={image(){return {setOrigin(){}};}};scene.create();frame=time=>scene.update(time);}}},Math:testMath};
  vm.createContext(sandbox);vm.runInContext(fs.readFileSync('questions.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('journey.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('map-world.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('dialogue.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('review.js','utf8'),sandbox);
  const source=fs.readFileSync('game.js','utf8').replace(/\r\n/g,'\n').replace('const UNLOCK_ALL_LEVELS=true;',`const UNLOCK_ALL_LEVELS=${unlockAll};`).replace('hud();\n// Start Phaser',`globalThis.physics={
- set(v){if(v.stageIndex!==undefined)stageIndex=v.stageIndex;if(v.spawnCount!==undefined)spawnCount=v.spawnCount;if(v.y!==undefined)y=v.y;if(v.vy!==undefined)vy=v.vy;if(v.grounded!==undefined)grounded=v.grounded;if(v.elapsed!==undefined)elapsed=v.elapsed;if(v.distance!==undefined)distance=v.distance;if(v.revives!==undefined)revives=v.revives;if(v.obstacles)obstacles=v.obstacles;if(v.platforms)platforms=v.platforms;if(v.gaps)gaps=v.gaps;},
+ set(v){if(v.stageIndex!==undefined)stageIndex=v.stageIndex;if(v.spawnCount!==undefined)spawnCount=v.spawnCount;if(v.nextSpawn!==undefined)nextSpawn=v.nextSpawn;if(v.y!==undefined)y=v.y;if(v.vy!==undefined)vy=v.vy;if(v.grounded!==undefined)grounded=v.grounded;if(v.elapsed!==undefined)elapsed=v.elapsed;if(v.distance!==undefined)distance=v.distance;if(v.revives!==undefined)revives=v.revives;if(v.obstacles)obstacles=v.obstacles;if(v.platforms)platforms=v.platforms;if(v.gaps)gaps=v.gaps;},
  get(){return {y,vy,grounded,state,unlocked,bossActive:boss.active,bossHp:boss.hp,bossMaxHp:boss.maxHp,bossDeathTime:boss.deathTime,attempts,correctCount,platforms:platforms.length,gaps:gaps.length};},
  appearance(){return {bugs:bugLooks,color:stageData().color,wire:blendColor(stageData().color,stageData().background,.45)};},step,spawn,updatePickups,heartDistance,loot(){return {revives,heartNumber,pickups,obstacles,platforms,gaps};}
  };hud();\n// Start Phaser`);
@@ -486,16 +487,16 @@ test('low tunnel permits running but jumping into its ceiling ends either mode i
 
 
 test('shop spends coins once, equips owned styles freely, and restores purchases after reload',()=>{
- const storage=new Map([['cpuEscapePractice',JSON.stringify({coins:6,progress:0})]]);
+ const storage=new Map([['cpuEscapePractice',JSON.stringify({coins:10,progress:0})]]);
  const s=setup(Math.random,false,storage),e=s.elements;e['shop-tab'].click();
- assert.equal(e['shop-panel'].hidden,false);assert.equal(e['shop-items'].children.length,5);
+ assert.equal(e['shop-panel'].hidden,false);assert.equal(e['shop-items'].children.length,8);
  const original=s.character.palette().c;
  e['shop-items'].children[1].children[2].click();
- assert.equal(s.review.getCoins(),4);assert.equal(s.character.palette().c,'#a8ffd5');
+ assert.equal(s.review.getCoins(),4);assert.equal(s.character.palette().c,'#592a8a');
  e['shop-items'].children[0].children[2].click();assert.equal(s.character.palette().c,original);
  e['shop-items'].children[1].children[2].click();assert.equal(s.review.getCoins(),4);
- s.physics.set({stageIndex:5});assert.equal(s.character.palette().c,'#a8ffd5');
- const reload=setup(Math.random,false,storage);assert.equal(reload.character.palette().c,'#a8ffd5');
+ s.physics.set({stageIndex:5});assert.equal(s.character.palette().c,'#592a8a');
+ const reload=setup(Math.random,false,storage);assert.equal(reload.character.palette().c,'#592a8a');
  assert.equal(reload.review.getCoins(),4);reload.elements['shop-tab'].click();
  assert.equal(reload.elements['shop-items'].children[1].children[2].textContent,'Equipped');
 });
@@ -592,4 +593,83 @@ test('curved wire rises from overlapping ground, has one jumpable middle break, 
   }
   assert.ok(climbed);assert.ok(jumped);assert.equal(s.physics.get().y,528);
  }
+});
+
+test('missed review shows an empty message and retains game misses across reloads',()=>{
+ const storage=new Map(),s=setup(Math.random,false,storage),e=s.elements;
+ e['review-missed'].click();assert.match(e['review-count'].textContent,/have not missed/);assert.equal(e['review-card'].hidden,true);
+ e.action.click();s.physics.set({y:540,gaps:[{x:180,w:150}]});s.physics.step(1/120);
+ const missed=e.title.textContent;e.answers.children[(s.correct()+1)%4].click();
+ e['review-missed'].click();assert.equal(e['review-card'].hidden,false);assert.equal(e['review-question'].textContent,missed);assert.match(e['review-count'].textContent,/Question 1 \/ 1/);
+ const restored=setup(Math.random,false,storage);restored.elements['review-missed'].click();assert.equal(restored.elements['review-question'].textContent,missed);
+});
+
+test('LSU character abilities apply when equipped',()=>{
+ function withCharacter(id){return setup(Math.random,false,new Map([['cpuEscapeCharacter',JSON.stringify({owned:[id],equipped:id})]]));}
+ const lane=withCharacter('lane-kiffin');practice(lane,10);assert.equal(lane.review.getCoins(),2);
+ const student=withCharacter('student');student.elements.action.click();student.physics.set({y:540,gaps:[{x:180,w:150}]});student.physics.step(1/120);assert.equal(student.elements.answers.children.filter(b=>b.disabled).length,2);assert.notEqual(student.elements.answers.children[student.correct()].disabled,true);
+ const player=withCharacter('football');player.elements.action.click();assert.equal(player.physics.loot().revives,4);
+ const golden=withCharacter('golden-girl');golden.elements.action.click();golden.physics.set({y:540,gaps:[{x:180,w:150}]});golden.physics.step(1/120);golden.elements.answers.children[(golden.correct()+1)%4].click();assert.equal(golden.elements.action.textContent,'Automatic recovery');golden.elements.action.click();assert.equal(golden.physics.get().state,'running');
+ const felipe=withCharacter('felipe');felipe.elements.action.click();felipe.physics.set({elapsed:60});felipe.physics.step(1/120);felipe.elements.action.click();assert.equal(felipe.physics.get().bossHp,felipe.physics.get().bossMaxHp-1);
+ const mike=withCharacter('mike');mike.elements['free-play-start'].click();mike.physics.set({distance:1000});mike.physics.step(1/120);assert.ok(Number(mike.elements.best.textContent.match(/\d+/)[0])>=200);
+});
+
+test('double jump pickup grants one extra jump per landing and resets on restart',()=>{
+ const s=setup(),e=s.elements, key=(type)=>s.listeners[type]({code:'Space',repeat:false,preventDefault(){}});
+ e.action.click();s.physics.set({distance:5980,nextSpawn:100000,obstacles:[],platforms:[],gaps:[]});s.physics.step(1/120);
+ assert.match(e.speed.textContent,/DOUBLE JUMP/);
+ key('keydown');s.physics.step(1/120);key('keyup');s.physics.step(1/120);key('keydown');assert.equal(s.physics.get().vy,-830);
+ key('keyup');s.physics.step(1/120);const velocity=s.physics.get().vy;key('keydown');assert.equal(s.physics.get().vy,velocity);
+ key('keyup');s.physics.set({y:528,vy:0,grounded:true,obstacles:[],platforms:[],gaps:[]});for(let i=0;i<1201;i++)s.physics.step(1/120);assert.doesNotMatch(e.speed.textContent,/DOUBLE JUMP/);
+ e['free-play-start'].click();assert.doesNotMatch(e.speed.textContent,/DOUBLE JUMP/);
+});
+
+test('student equipped in shop eliminates two wrong choices in review and boss questions',()=>{
+ const storage=new Map([['cpuEscapePractice',JSON.stringify({coins:14,progress:0})]]),s=setup(Math.random,false,storage),e=s.elements;
+ e['shop-tab'].click();e['shop-items'].children[5].children[2].click();assert.equal(s.character.has('student'),true);
+ e['review-tab'].click();assert.equal(e['review-answers'].children.filter(b=>b.disabled).length,2);assert.notEqual(e['review-answers'].children[s.reviewCorrect()].disabled,true);
+ e.action.click();s.physics.set({elapsed:60});s.physics.step(1/120);e.action.click();assert.equal(s.physics.get().state,'boss-question');assert.equal(e.answers.children.filter(b=>b.disabled).length,2);assert.notEqual(e.answers.children[s.correct()].disabled,true);
+});
+test('golden girl recovers once from a fatal collision with no revives',()=>{
+ const storage=new Map([['cpuEscapeCharacter',JSON.stringify({owned:['golden-girl'],equipped:'golden-girl'})]]),s=setup(Math.random,false,storage),e=s.elements;
+ e.action.click();s.physics.set({revives:0,y:540,gaps:[{x:180,w:150}]});s.physics.step(1/120);assert.equal(s.physics.get().state,'running');
+ s.physics.set({revives:0,y:540,gaps:[{x:180,w:150}]});s.physics.step(1/120);assert.equal(s.physics.get().state,'over');
+});
+
+test('slowdown pickup sets speed to 0.9 for six seconds',()=>{
+ const s=setup(),e=s.elements;e.action.click();s.physics.set({distance:29980,nextSpawn:100000,obstacles:[],platforms:[],gaps:[]});s.physics.step(1/120);
+ assert.match(e.speed.textContent,/0\.90.*SLOW 6s/);assert.equal(s.review.getCoins(),0);
+ for(let i=0;i<721;i++)s.physics.step(1/120);assert.doesNotMatch(e.speed.textContent,/SLOW/);assert.notEqual(e.speed.textContent,'0.90? SPEED');
+});
+
+test('ghost pickup prevents obstacle collisions for five seconds and expires',()=>{
+ const s=setup(),e=s.elements;e.action.click();s.physics.set({distance:17980,nextSpawn:100000,obstacles:[],platforms:[],gaps:[]});s.physics.step(1/120);assert.match(e.speed.textContent,/GHOST 5s/);
+ s.physics.set({obstacles:[{x:220,w:42,h:80}]});s.physics.step(1/120);assert.equal(s.physics.get().state,'running');
+ s.physics.set({obstacles:[]});for(let i=0;i<601;i++)s.physics.step(1/120);assert.doesNotMatch(e.speed.textContent,/GHOST/);
+ s.physics.set({obstacles:[{x:220,w:42,h:80}]});s.physics.step(1/120);assert.equal(s.physics.get().state,'quiz');
+});
+
+test('level stars reflect wrong answers and persist the best rating',()=>{
+ for(const wrong of [0,1,2,3]){
+  const storage=new Map(),s=setup(Math.random,false,storage),e=s.elements;e.action.click();s.physics.set({elapsed:60});s.physics.step(1/120);e.action.click();
+  for(let i=0;i<wrong;i++){e.answers.children[(s.correct()+1)%4].click();e.action.click();}
+  while(s.physics.get().bossHp>0){e.answers.children[s.correct()].click();if(s.physics.get().bossHp===0)s.tick(60);e.action.click();}
+  assert.equal(JSON.parse(storage.get('cpuEscapeLevelStars'))[0],Math.max(0,3-wrong));
+  e.action.click();assert.match(e['map-nodes'].children[0].textContent,new RegExp(`${Math.max(0,3-wrong)} / 3 STARS`));
+  const reload=setup(Math.random,false,storage);reload.elements.start.click();reload.elements.action.click();reload.tick(210);assert.match(reload.elements['map-nodes'].children[0].textContent,new RegExp(`${Math.max(0,3-wrong)} / 3 STARS`));
+ }
+});
+
+test('finish flag has a clear approach and no hazards beyond it',()=>{
+ const s=setup(),e=s.elements;e.action.click();
+ s.physics.set({elapsed:29.8,nextSpawn:100000,obstacles:[{x:220,w:42,h:80},{x:650,w:42,h:80}],platforms:[{x:500,w:80,h:40}],gaps:[{x:450,w:80}]});
+ s.physics.step(1/120);assert.equal(s.physics.get().state,'running');assert.equal(s.physics.get().platforms,0);assert.equal(s.physics.get().gaps,0);assert.equal(s.physics.loot().obstacles.length,0);
+});
+
+
+test('ghost mode supports the player over holes until it expires',()=>{
+ const s=setup(),e=s.elements;e.action.click();s.physics.set({distance:17980,nextSpawn:100000,obstacles:[],platforms:[],gaps:[]});s.physics.step(1/120);
+ s.physics.set({y:528,vy:0,grounded:true,gaps:[{x:180,w:4000}]});for(let i=0;i<120;i++)s.physics.step(1/120);
+ assert.equal(s.physics.get().state,'running');assert.equal(s.physics.get().grounded,true);assert.equal(s.physics.get().y,528);
+ for(let i=0;i<500&&s.physics.get().state==='running';i++)s.physics.step(1/120);assert.equal(s.physics.get().state,'quiz');
 });
