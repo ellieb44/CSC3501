@@ -26,16 +26,16 @@ const entries=[
 let batch=[],questionIndex=0,batchCorrect=0,answered=false,mode='all';
 function save(){try{localStorage.setItem(storageKey,JSON.stringify({coins,progress,missed}));}catch{}}
 function refreshWallet(){
- for(const id of ['coin-balance','game-coins','review-coins','shop-coins'])document.getElementById(id).textContent='Coins: '+coins;
+ for(const id of ['coin-balance','game-coins'])document.getElementById(id).textContent='Coins: '+coins;
  document.getElementById('review-progress').value=progress;
- document.getElementById('review-progress-text').textContent=progress+' / 10 correct';
+ document.getElementById('review-progress-text').textContent=progress+' / 10';
 }
 function spendCoins(amount){if(!Number.isSafeInteger(amount)||amount<1||coins<amount)return false;coins-=amount;save();refreshWallet();return true;}
 function spendCoin(){return spendCoins(1);}
 function show(entry){
  if(!entry)return;answered=false;question.textContent=entry.q.question;feedback.textContent='';answers.replaceChildren();
- nextButton.disabled=true;nextButton.textContent=questionIndex===batch.length-1?(batch.length===10?'Start 10 new questions':'Start new questions'):'Next question';
- document.getElementById('review-count').textContent=`Question ${questionIndex+1} / ${batch.length} - ${entry.topic} / ${entry.kind==='boss'?'Boss':'Run'}`;
+ nextButton.disabled=true;nextButton.textContent=questionIndex===batch.length-1?'New batch':'Next';
+ document.getElementById('review-count').textContent=`${questionIndex+1} / ${batch.length} / ${entry.topic}${entry.kind==='boss'?' / Boss':''}`;
  entry.q.options.forEach((text,index)=>{
   const button=document.createElement('button');button.type='button';button.textContent=String.fromCharCode(65+index)+'. '+text;
   button.addEventListener('click',()=>{
@@ -53,7 +53,7 @@ function show(entry){
 function newBatch(){
  const shuffled=entries.filter(entry=>mode==='all'||missed.includes(entry.id));
  document.getElementById('review-card').hidden=!shuffled.length;
- if(!shuffled.length){batch=[];answered=false;document.getElementById('review-count').textContent='You have not missed any questions in the game yet.';return;}
+ if(!shuffled.length){batch=[];answered=false;document.getElementById('review-count').textContent='No missed questions yet.';return;}
  for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
  batch=shuffled.slice(0,10);questionIndex=0;batchCorrect=0;show(batch[0]);
 }

@@ -9,7 +9,7 @@ async function boot(page){
  return errors;
 }
 async function enterCPU(page){
- await page.click('#start');await page.click('#action');
+ await page.click('#start');await page.click('#action');await page.getByRole('button',{name:'No thanks'}).click();
  await expect(page.locator('#world-map')).toBeVisible();
  await expect(page.locator('#map-enter')).toBeEnabled();await page.click('#map-enter');
  await expect(page.locator('#title')).toHaveText('CPU');await page.click('#action');
@@ -22,6 +22,15 @@ test('Phaser owns the renderer and scene without changing the canvas layout',asy
   image:cpuGame.scene.getScene('CpuEscape').children.list[0].type}));
  expect(runtime).toEqual({version:'4.2.1',type:1,canvas:true,texture:true,image:'Image'});
  await expect(page.locator('#stage canvas')).toHaveCount(1);
+ await expect(page.getByText('How to play',{exact:true})).toHaveCount(0);
+ const sound=page.getByRole('button',{name:'Game sound'});
+ const slash=sound.locator('.mute-slash');
+ await expect(slash).toBeHidden();
+ await sound.click();
+ await expect(sound).toHaveAttribute('aria-pressed','false');
+ await expect(slash).toBeVisible();
+ await sound.click();
+ await expect(slash).toBeHidden();
  await enterCPU(page);
  await expect.poll(()=>page.locator('#score').textContent()).not.toBe('0');
  const bounds=await page.locator('#game').boundingBox();expect(bounds.width).toBeLessThan(1151);
@@ -63,7 +72,22 @@ test('mobile canvas and map controls retain the original responsive layout',asyn
  expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(390);
  expect(bounds.width/bounds.height).toBeCloseTo(.8,1);
  await page.click('#back-map');await expect(page.locator('#stay-level')).toBeVisible();
- await page.click('#leave-level');await expect(page.locator('#world-map')).toBeVisible();expect(errors).toEqual([]);
+ await page.click('#leave-level');await expect(page.locator('#world-map')).toBeVisible();
+ await expect(page.getByText('Routes & controls')).toHaveCount(0);
+ const destinations=page.getByRole('group',{name:'Circuit destinations'});
+ await expect(destinations.getByRole('button',{name:/LOCKED/})).toHaveCount(5);
+ await expect(destinations.getByRole('button',{name:/CPU.*OPEN/})).toBeEnabled();
+ const padlocks=await page.locator('#map-canvas').evaluate(canvas=>{
+  const ctx=canvas.getContext('2d');
+  return [...document.querySelectorAll('#map-nodes button')].map(button=>{
+   const x=Math.floor((parseFloat(button.style.left)/100+4/400)*canvas.width);
+   const y=Math.floor((parseFloat(button.style.top)/100+2/220)*canvas.height);
+   const [r,g,b]=ctx.getImageData(x,y,1,1).data;
+   return r===244&&g===223&&b===159;
+  });
+ });
+ expect(padlocks).toEqual([false,true,true,true,true,true]);
+ expect(errors).toEqual([]);
 });
 
 // Serve an instrumented copy in this test only, so the real boss UI can be
@@ -87,10 +111,17 @@ async function bootBossFixture(page){
 }
 test('boss health, turnaround, answers, defeat, and final victory work in Phaser',async({page})=>{
  const errors=await bootBossFixture(page);
- for(const stage of [0,5]){
+ await page.evaluate(()=>{
+  const setScene=window.cpuAudio.setScene;
+  window.musicScenes=[];
+  window.cpuAudio.setScene=scene=>{window.musicScenes.push(scene);setScene(scene);};
+ });
+ for(const [stage,bossName] of [[0,'Boot Bug'],[5,'Zero-Day Virus']]){
   await page.evaluate(stage=>window.__bossTest.begin(stage),stage);
   await expect(page.locator('#stage')).toHaveClass(/boss-mode/);
-  await expect(page.locator('#boss-hp')).toHaveText(`BUG: ${stage+3} / ${stage+3} HP`);
+  await expect(page.locator('#hearts .heart:not(.lost) svg')).toHaveCount(3);
+  expect(await page.evaluate(()=>window.musicScenes.slice(-2))).toEqual([stage,'boss']);
+  await expect(page.locator('#boss-hp')).toHaveText(`${bossName}: ${stage+3} / ${stage+3} HP`);
   await page.click('#action');
   const arena=await page.locator('#game').boundingBox(),questions=await page.locator('#overlay').boundingBox();
   expect(arena.x+arena.width).toBeLessThanOrEqual(questions.x+1);
@@ -105,6 +136,7 @@ test('boss health, turnaround, answers, defeat, and final victory work in Phaser
    await page.click('#action');
   }
   await expect(page.locator('#stage')).not.toHaveClass(/boss-mode/);
+  expect(await page.evaluate(()=>window.musicScenes.at(-1))).toEqual(stage);
   await expect(page.locator('#title')).toHaveText(stage===5?'The boy is finally home.':'CPU complete!');
  }
  expect(errors).toEqual([]);
@@ -118,15 +150,16 @@ test('boss fight remains usable on a small screen',async({page})=>{
  await page.screenshot({path:test.info().outputPath('boss-mobile-dock.png')});
  const correct=await page.evaluate(()=>cpuBossQuestions.find(q=>q.question===document.getElementById('title').textContent).correctAnswer);
  await page.locator('#answers button').nth(correct).click();
- await expect(page.locator('#boss-hp')).toHaveText('BUG: 2 / 3 HP');await page.click('#action');
+ await expect(page.locator('#boss-hp')).toHaveText('Boot Bug: 2 / 3 HP');await page.click('#action');
  await expect(page.locator('#answers button:disabled')).toHaveCount(0);
  await page.click('#back-map');await page.click('#stay-level');
  await expect(page.locator('#boss-status')).toBeVisible();expect(errors).toEqual([]);
 });
 
 async function openReview(page){
- await page.click('#start');await page.click('#action');await page.click('#review-tab');
+ await page.click('#start');await page.click('#action');await page.getByRole('button',{name:'No thanks'}).click();await page.click('#review-tab');
  await expect(page.locator('#review-panel')).toBeVisible();
+ await expect(page.locator('#world-map .coin-balance:visible')).toHaveCount(1);
 }
 async function practiceCorrectly(page,count){
  for(let i=0;i<count;i++){
@@ -138,15 +171,15 @@ test('review earns persistent coins and spends them on real run and boss questio
  await page.addInitScript(()=>localStorage.setItem('cpuEscapeCoinGrant10','1'));
  const errors=await bootBossFixture(page);await openReview(page);
  await expect(page.locator('#review-panel select')).toHaveCount(0);
- await expect(page.locator('#review-count')).toContainText('Question 1 / 10');
+ await expect(page.locator('#review-count')).toContainText('1 / 10');
  await expect(page.locator('#review-next')).toBeDisabled();
- await practiceCorrectly(page,13);await expect(page.locator('#review-coins')).toHaveText('Coins: 1');
- await expect(page.locator('#review-progress-text')).toHaveText('3 / 10 correct');
- await page.reload();await page.waitForFunction(()=>window.cpuGame?.isRunning);await openReview(page);
- await expect(page.locator('#review-coins')).toHaveText('Coins: 1');
- await expect(page.locator('#review-progress-text')).toHaveText('3 / 10 correct');
+ await practiceCorrectly(page,13);await expect(page.locator('#coin-balance')).toHaveText('Coins: 1');
+ await expect(page.locator('#review-progress-text')).toHaveText('3 / 10');
+ await page.reload();await page.waitForFunction(()=>window.cpuGame?.isRunning);await page.getByRole('button',{name:'Continue Game'}).click();await page.click('#review-tab');
+ await expect(page.locator('#coin-balance')).toHaveText('Coins: 1');
+ await expect(page.locator('#review-progress-text')).toHaveText('3 / 10');
  await practiceCorrectly(page,7);
- await expect(page.locator('#review-coins')).toHaveText('Coins: 2');
+ await expect(page.locator('#coin-balance')).toHaveText('Coins: 2');
  await page.click('#map-tab');await page.click('#map-enter');await page.click('#action');
  await expect(page.locator('#answers button')).toHaveCount(4,{timeout:15000});
  await expect(page.locator('#skip-question')).toBeEnabled();await page.click('#skip-question');
@@ -159,9 +192,123 @@ test('review earns persistent coins and spends them on real run and boss questio
 test('mobile review batches and practice answers fit the viewport',async({page})=>{
  await page.setViewportSize({width:390,height:844});const errors=await boot(page);await openReview(page);
  await expect(page.locator('#review-panel select')).toHaveCount(0);
- await expect(page.locator('#review-count')).toContainText('Question 1 / 10');
- await practiceCorrectly(page,1);await expect(page.locator('#review-progress-text')).toHaveText('1 / 10 correct');
+ await expect(page.locator('#review-count')).toContainText('1 / 10');
+ await practiceCorrectly(page,1);await expect(page.locator('#review-progress-text')).toHaveText('1 / 10');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
  await page.screenshot({path:test.info().outputPath('review-mobile.png'),fullPage:true});
  await page.click('#map-tab');await expect(page.locator('#map-panel')).toBeVisible();expect(errors).toEqual([]);
+});
+
+test('skipping the story keeps the final walk and offers a guided map tour',async({page})=>{
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ const errors=await boot(page);
+ await page.evaluate(()=>{
+  const draw=window.cpuOpening.draw;
+  window.walkProgress=[];
+  window.cpuOpening.draw=(ctx,width,height,phase,time,walk)=>{
+   if(phase===4&&walk>0)window.walkProgress.push(walk);
+   draw(ctx,width,height,phase,time,walk);
+  };
+ });
+ await page.click('#start');
+ await page.getByRole('button',{name:'Skip story'}).click();
+ await expect(page.locator('#title')).toHaveText('Find your way home.');
+ await expect(page.locator('#world-map')).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Want a quick tutorial?'})).toBeVisible();
+ const prompt=await page.locator('#tutorial').boundingBox();
+ const viewport=page.viewportSize();
+ expect(prompt.x+prompt.width/2).toBeCloseTo(viewport.width/2,0);
+ expect(prompt.y+prompt.height/2).toBeCloseTo(viewport.height/2,0);
+ const pointer=page.locator('#tutorial-pointer');
+ await expect(pointer).toBeHidden();
+ await page.getByRole('button',{name:'Show me'}).click();
+ await expect(pointer).toBeVisible();
+ const pointsAt=async id=>{
+  const box=await page.locator('#'+id+'-tab').boundingBox();
+  const path=await page.locator('#tutorial-line').getAttribute('d');
+  const [x,y]=path.split(' ').slice(-2).map(Number);
+  expect(x).toBeCloseTo(box.x+box.width/2,0);
+  expect(y).toBeCloseTo(box.y+box.height+4,0);
+ };
+ await pointsAt('map');
+ await expect(page.locator('#map-canvas')).toHaveClass(/tour-highlight/);
+ await expect.poll(()=>page.locator('#tutorial-text').textContent()).toMatch(/^Move/);
+ await page.locator('#tutorial-text').click();
+ await expect(page.locator('#tutorial-text')).toContainText('Beat all six to get home.');
+ for(const tab of ['review','free-play','shop']){
+  await page.getByRole('button',{name:'Next',exact:true}).click();
+  await expect(page.locator('#'+tab+'-tab')).toHaveClass(/tour-highlight/);
+  await pointsAt(tab);
+  const card=await page.locator('#tutorial').boundingBox();
+  expect(card.x+card.width/2).toBeCloseTo(viewport.width/2,0);
+  expect(card.y+card.height/2).toBeCloseTo(viewport.height/2,0);
+ }
+ await page.getByRole('button',{name:'Done'}).click();
+ await expect(page.locator('#tutorial')).toBeHidden();
+ await expect(pointer).toBeHidden();
+ await expect(page.locator('#map-enter')).toBeEnabled();
+ const progress=await page.evaluate(()=>window.walkProgress);
+ expect(progress[0]).toBeLessThan(.25);
+ expect(progress.at(-1)).toBeGreaterThan(.75);
+ expect(errors).toEqual([]);
+});
+
+
+test('Free Play previews the course and starts a run from the compact menu',async({page})=>{
+ const errors=await boot(page);
+ await page.click('#start');
+ await page.click('#action');
+ await page.getByRole('button',{name:'No thanks'}).click();
+ await page.getByRole('tab',{name:'Free Play'}).click();
+ await expect(page.getByRole('heading',{name:'Endless Run'})).toBeVisible();
+ await expect(page.locator('#free-play-best')).toHaveText('0 m');
+ const painted=await page.locator('#free-play-art').evaluate(canvas=>{
+  const ctx=canvas.getContext('2d');
+  return ctx.getImageData(16,172,1,1).data[3]===255;
+ });
+ expect(painted).toBe(true);
+ await page.setViewportSize({width:390,height:844});
+ await expect(page.getByRole('button',{name:'Start run'})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+ await page.getByRole('button',{name:'Start run'}).click();
+ await expect(page.locator('#chapter')).toHaveText('FREE PLAY / ENDLESS');
+ expect(errors).toEqual([]);
+});
+
+
+test('the fitting room animates outfit previews and shows lock and equip states',async({page})=>{
+ await page.addInitScript(()=>{
+  localStorage.setItem('cpuEscapeCoinGrant10','1');
+  localStorage.setItem('cpuEscapePractice',JSON.stringify({coins:30,progress:0}));
+ });
+ const errors=await boot(page);
+ await page.click('#start');
+ await page.click('#action');
+ await page.getByRole('button',{name:'No thanks'}).click();
+ await page.getByRole('tab',{name:'Shop'}).click();
+ const preview=page.locator('#shop-preview-art');
+ await expect(preview).toHaveAttribute('aria-label','Classic courier preview');
+ await expect(page.locator('#shop-status')).toHaveText('Equipped');
+ const professor=page.getByRole('button',{name:/Felipe Fronchetti.*Locked/});
+ const thumbnail=professor.locator('canvas');
+ const still=await thumbnail.evaluate(canvas=>canvas.toDataURL());
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await professor.hover();
+ await expect.poll(()=>thumbnail.evaluate(canvas=>canvas.toDataURL())).not.toBe(still);
+ await professor.click();
+ await expect(preview).toHaveAttribute('aria-label','Felipe Fronchetti preview');
+ await expect(page.locator('#shop-status')).toHaveText('Locked');
+ await expect(page.locator('#coin-balance')).toHaveText('Coins: 30');
+ const football=page.getByRole('button',{name:/Football Player/});
+ await football.click();
+ await expect(preview).toHaveAttribute('aria-label','Football Player preview');
+ await page.getByRole('button',{name:/Buy & equip.*12 coins/}).click();
+ await expect(page.locator('#shop-status')).toHaveText('Equipped');
+ await expect(page.locator('#coin-balance')).toHaveText('Coins: 18');
+ await page.getByRole('button',{name:/Classic courier/}).click();
+ await page.getByRole('button',{name:'Equip',exact:true}).click();
+ await expect(football).toHaveText(/Unlocked/);
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+ expect(errors).toEqual([]);
 });

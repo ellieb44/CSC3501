@@ -6,11 +6,11 @@ for(let i=1;i<stations.length;i++){const a=stations[i-1],b=stations[i],mid=Math.
 let stars=[],completed=0,distance=0,limit=0,target=null,direction=0,arrival=0,clock=0,onEnter=()=>{};
 function position(d){for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],n=Math.hypot(b[0]-a[0],b[1]-a[1]);if(d<=n)return [a[0]+(b[0]-a[0])*d/n,a[1]+(b[1]-a[1])*d/n];d-=n;}return stations[5];}
 function nearby(){return stops.findIndex((d,i)=>i<=limit&&Math.abs(d-distance)<6);}
-function prompt(){const i=nearby();enter.disabled=arrival>0||i<0;enter.textContent=i>=0?(i<completed?'Replay':'Enter'):'Follow the path';status.textContent=completed>=cpuStages.length?'Every route cleared. The boy can finally go home.':arrival>0?'...':i>=0?'':'Follow the signal.';}
+function prompt(){const i=nearby();enter.disabled=arrival>0||i<0;enter.textContent=i>=0?(i<completed?'Replay':'Enter'):'Follow the path';status.textContent=completed>=cpuStages.length?'Every route cleared. The boy can finally go home.' : '';}
 function travel(i){if(i>limit||arrival>0)return;target=stops[i];direction=0;canvas.focus();}
 function activate(){const i=nearby();if(arrival<=0&&i>=0)onEnter(i);}
-function show(config){stars=config.stars||[];completed=config.unlocked;limit=Math.min(config.unlocked,5);distance=stops[Math.min(config.current,limit)];onEnter=config.onEnter;arrival=config.arrival&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?1.3:0;clock=0;target=null;direction=0;nodes.replaceChildren();cpuStages.forEach((s,i)=>{const b=document.createElement('button');b.className='map-location '+(i>limit?'locked':i<config.unlocked?'cleared':'current');b.disabled=i>limit;b.textContent=String(i+1).padStart(2,'0')+' '+s.name+(i>limit?' / LOCKED':i<config.unlocked?' / CLEARED':' / OPEN')+(Number.isInteger(stars[i])?' / '+stars[i]+' / 3 STARS':'');b.addEventListener('click',()=>travel(i));nodes.append(b);});prompt();canvas.focus();draw();}
-function update(dt){clock+=dt;if(arrival>0){arrival=Math.max(0,arrival-dt);prompt();return;}let delta=direction*52*dt;if(target!==null){const diff=target-distance;delta=Math.sign(diff)*Math.min(Math.abs(diff),52*dt);if(Math.abs(diff)<.01)target=null;}const next=Math.max(0,Math.min(stops[limit],distance+delta));if(next!==distance){distance=next;prompt();}}
+function show(config){stars=config.stars||[];completed=config.unlocked;limit=Math.min(config.unlocked,5);distance=stops[Math.min(config.current,limit)];onEnter=config.onEnter;arrival=config.arriving ? .65 : 0;clock=0;target=null;direction=0;nodes.replaceChildren();cpuStages.forEach((s,i)=>{const b=document.createElement('button');const [x,y]=stations[i];b.style.left=100*x/400+'%';b.style.top=100*y/220+'%';b.className='map-location '+(i>limit?'locked':i<config.unlocked?'cleared':'current');b.disabled=i>limit;b.textContent=String(i+1).padStart(2,'0')+' '+s.name+(i>limit?' / LOCKED':i<config.unlocked?' / CLEARED':' / OPEN')+(Number.isInteger(stars[i])?' / '+stars[i]+' / 3 STARS':'');b.addEventListener('click',()=>travel(i));nodes.append(b);});prompt();canvas.focus();draw();}
+function update(dt){clock+=dt;if(arrival>0){arrival=Math.max(0,arrival-dt);if(arrival===0)prompt();return;}let delta=direction*52*dt;if(target!==null){const diff=target-distance;delta=Math.sign(diff)*Math.min(Math.abs(diff),52*dt);if(Math.abs(diff)<.01)target=null;}const next=Math.max(0,Math.min(stops[limit],distance+delta));if(next!==distance){distance=next;prompt();}}
 function move(value){if(value&&value!==direction)window.cpuAudio?.effect('navigate');direction=value;target=null;}
 function key(e,down){const forward=['ArrowRight','ArrowUp','KeyD','KeyW'],back=['ArrowLeft','ArrowDown','KeyA','KeyS'];if(forward.includes(e.code)||back.includes(e.code)){e.preventDefault();if(down){move(forward.includes(e.code)?1:-1);}else direction=0;return true;}if(down&&['Enter','Space'].includes(e.code)){e.preventDefault();if(!e.repeat)activate();return true;}return false;}
 function draw(){
@@ -43,9 +43,17 @@ if(Number.isInteger(stars[i])){
   }));
  }
 }
-ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillStyle=i>limit?'#c1cbd0':color;ctx.fillText(cpuStages[i].name,x,y+29);if(i>limit){r(x-3,y-4,6,8,'#38434d');r(x-2,y-6,4,2,'#bac0af');}}
-let [px,py]=position(distance);if(arrival>0){px-=arrival*29;py+=arrival*10;}const walking=arrival>0||direction!==0||target!==null;const stride=walking?Math.floor(clock*9)%2:0;const boy=['...hhhh...','..hhhhhh..','..hssss...','..hsees...','...ssss...','..cccccc..','.cccccccc.','..cccccc..','...cccc...','...l..l...','..ll..ll..'];r(px-6,py+2,13,3,'#08151b');boy.forEach((row,y)=>[...row].forEach((c,x)=>{const color=(window.cpuCharacter?.palette()??{h:'#ece3d0',s:'#e5b88f',e:'#191326',c:'#a8bbdb',l:'#9180ac'})[c];if(color)r(px-5+x,py-11+y+(y>8?((x<5?stride:-stride)):0),1,1,color);}));ctx.fillStyle='#b3cab4';ctx.textAlign='left';ctx.font='6px monospace';ctx.fillText('I/O > HOME',325,209);
+ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillStyle=i>limit?'#c1cbd0':color;ctx.fillText(cpuStages[i].name,x,y+29);if(i>limit){
+ const gold='#f4df9f',shadow='#0a151c';
+ r(x-10,y-10,20,21,shadow);
+ r(x-4,y-8,8,2,gold);
+ r(x-6,y-6,2,6,gold);
+ r(x+4,y-6,2,6,gold);
+ r(x-8,y-1,16,10,gold);
+ r(x-1,y+2,2,4,shadow);
+}}
+const [x,y]=position(distance),px=x-arrival*46,py=y;const walking=arrival>0||direction!==0||target!==null;const stride=walking?Math.floor(clock*9)%2:0;const boy=[...courierHead,'...ssss...','..cccccc..','.cccccccc.','..cccccc..','...cccc...','...l..l...','..ll..ll..'];r(px-6,py+2,13,3,'#08151b');boy.forEach((row,y)=>[...row].forEach((c,x)=>{const color=(window.cpuCharacter?.palette()??{h:courierHair,s:'#e5b88f',e:'#191326',c:'#a8bbdb',l:'#9180ac'})[c];if(color)r(px-5+x,py-11+y+(y>8?((x<5?stride:-stride)):0),1,1,color);}));ctx.fillStyle='#b3cab4';ctx.textAlign='left';ctx.font='6px monospace';ctx.fillText('I/O > HOME',325,209);
 }
 enter.addEventListener('click',activate);for(const [id,value] of [['map-prev',-1],['map-next',1]]){const b=document.getElementById(id);b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);move(value);});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>move(0));b.addEventListener('keydown',e=>{if(['Enter','Space'].includes(e.code)){e.preventDefault();move(value);}});b.addEventListener('keyup',()=>move(0));}
-window.cpuMap={show,update,draw,key,stop(){direction=0;target=null;},inspect:()=>({distance,limit,arrival,nearby:nearby()})};
+window.cpuMap={show,update,draw,key,stop(){direction=0;target=null;},inspect:()=>({distance,limit,nearby:nearby()})};
 })();

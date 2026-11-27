@@ -1,3 +1,5 @@
+const courierHair='#69424b';
+const courierHead=['...hhhh...','..hhhhhh..','..hssss...','..hsees...'];
 const cpuStages=[
 {name:'CPU',color:'#a8ffd5',lesson:'The Central Processing Unit executes program instructions. To get home, you must travel through its components and learn how they work together.',ids:[0,4],landmark:'FETCH / DECODE / EXECUTE'},
 {name:'CONTROL UNIT',color:'#ffd76e',lesson:'The conductor of the machine. The Control Unit decodes instructions and coordinates the signals that tell other components what to do.',ids:[2,4,8],landmark:'DECODE / DIRECT / COORDINATE'},
